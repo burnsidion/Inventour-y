@@ -1,0 +1,23 @@
+{
+  "name": "inventour-y",
+  "version": "1.0.0",
+  "description": "Full-Stack application allowing merch managers to keep track of inventory and sales.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/burnsidion/Inventour-y.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/burnsidion/Inventour-y/issues"
+  },
+  "homepage": "https://github.com/burnsidion/Inventour-y#readme",
+  "dependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
