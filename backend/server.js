@@ -1,10 +1,12 @@
-import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
+dotenv.config();
+
+import express from 'express';
+import supabase from './utils/supabaseClient.js';
+import cors from 'cors';
 
 import apiRoutes from './routes/api.js';
 
-dotenv.config();
 
 const app = express();
 
@@ -17,7 +19,7 @@ app.get('/', (req, res) => {
 
 //API routes
 app.use('/api', apiRoutes);
-
+console.log('Supabase client import successful');
 const PORT = process.env.PORT || 5002;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
