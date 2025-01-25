@@ -13,7 +13,6 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
-console.log('Supabase client initialized successfully:', supabase);
 
 console.log('SUPABASE_URL in supabaseClient:', process.env.SUPABASE_URL || 'Not loaded');
 console.log('SUPABASE_KEY in supabaseClient:', process.env.SUPABASE_KEY || 'Not loaded');

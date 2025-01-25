@@ -13,6 +13,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use('/api', apiRoutes);
 
 app.get('/', (req, res) => {
   res.send('Backend is running!');
@@ -29,7 +30,6 @@ pool.query('SELECT NOW()', (err, res) => {
 });
 
 //API routes
-app.use('/api', apiRoutes);
 console.log('Supabase client import successful');
 
 const PORT = process.env.PORT || 5002;
