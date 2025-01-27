@@ -132,4 +132,137 @@ router.get('/shows', async (req, res) => {
   }
 });
 
+//Inventory routes 
+router.post('/inventory', async (req, res) => {
+ const { tour_id, name, type, size, quantity, price, image_url } = req.body;
+
+ if(!tour_id || !name || !type || !quantity || !price) {
+  return res.status(400).json({ error: 'Missing required fields: tour_id, name, type, quantity, price' });
+ }
+
+ try {
+  const result = await pool.query(
+    `INSERT INTO inventory (tour_id, name, type, size, quantity, price, image_url) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [tour_id, name, type, size || null, quantity, price, image_url || null]
+  );
+  res.status(201).json({ message: 'Inventory items added', itme: result.rows[0] });
+ } catch(error) {
+  console.error('Error adding inventory', error);
+  res.status(500).json({ error: 'Failed to add inventory item' });
+ }
+});
+
+router.get('/inventory', async (req, res) => {
+  const { tour_id } = req.query;
+
+  if (!tour_id) {
+    return res.status(400).json({ error: 'Missing required query parameter: tour_id' });
+  }
+
+  try {
+    const result = await pool.query(
+      'SELECT * FROM inventory WHERE tour_id = $1 ORDER BY name ASC',
+      [tour_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'No inventory items found for this tour' });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching inventory:', error);
+    res.status(500).json({ error: 'Failed to fetch inventory items' });
+  }
+});
+
+//Sales routes 
+router.post('/sales', async (req, res) => {
+  const { inventory_id, quantity_sold, total_amount, payment_method } = req.body;
+
+  if (!inventory_id || !quantity_sold || !total_amount || !payment_method) {
+    return res.status(400).json({
+      error: 'Missing required fields: inventory_id, quantity_sold, total_amount, payment_method',
+    });
+  }
+
+  const validPaymentMethods = ['cash', 'card', 'free'];
+
+  if (!validPaymentMethods.includes(payment_method)) {
+    return res.status(400).json({
+      error: `Invalid payment method. Must be one of: ${validPaymentMethods.join(', ')}`,
+    });
+  }
+
+  try {
+    await pool.query('BEGIN');
+
+    let adjustedPrice = total_amount;
+
+    if (payment_method === 'free') {
+      adjustedPrice = 0;
+    }
+
+    const inventoryResult = await pool.query(
+      `UPDATE inventory
+       SET quantity = quantity - $1
+       WHERE id = $2 AND quantity >= $1
+       RETURNING *`,
+      [quantity_sold, inventory_id]
+    );
+
+    if (inventoryResult.rows.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(400).json({ error: 'Insufficient inventory or invalid inventory ID' });
+    }
+
+    const salesResult = await pool.query(
+      `INSERT INTO sales (inventory_id, quantity_sold, total_amount, payment_method)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [inventory_id, quantity_sold, adjustedPrice, payment_method]
+    );
+
+    await pool.query('COMMIT');
+
+    res.status(201).json({
+      message: 'Sale recorded successfully!',
+      sale: salesResult.rows[0],
+    });
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    console.error('Error recording sale:', error);
+    res.status(500).json({ error: 'Failed to record sale' });
+  }
+});
+
+router.get('/sales', async (req, res) => {
+  const { tour_id } = req.query;
+
+  if (!tour_id) {
+    return res.status(400).json({ error: 'Missing required query parameter: tour_id' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT sales.id, sales.quantity_sold, sales.total_amount, sales.payment_method, sales.created_at,
+              inventory.name AS item_name, inventory.type, inventory.size, inventory.price
+       FROM sales
+       JOIN inventory ON sales.inventory_id = inventory.id
+       WHERE inventory.tour_id = $1
+       ORDER BY sales.created_at DESC`,
+      [tour_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'No sales found for this tour' });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching sales:', error);
+    res.status(500).json({ error: 'Failed to fetch sales' });
+  }
+});
 export default router;
