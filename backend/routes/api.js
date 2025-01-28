@@ -9,15 +9,10 @@ import { authorizeRole } from '../middleware/authorizeRole.js';
 const router = express.Router();
 
 //Users Routes
-router.post('/users', authenticateToken, async (req, res) => {
+router.post('/users', async (req, res) => {
   const { name, email, password, role } = req.body;
   const validRoles = ['admin', 'manager', 'user'];
-
-  if (req.user.role !== 'admin' && role && role !== 'user') {
-    return res.status(403).json({ error: 'Only admins can assign roles' });
-  }
-
-  const assignedRole = role && validRoles.includes(role) ? role : 'user';
+  const assignedRole = validRoles.includes(role) ? role : 'user';
 
   try {
     const saltRounds = 10;
@@ -189,7 +184,7 @@ router.get('/shows', authenticateToken, async (req, res) => {
 });
 
 //Inventory routes 
-router.post('/inventory', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+router.post('/inventory', authenticateToken, async (req, res) => {
  const { tour_id, name, type, size, quantity, price, image_url } = req.body;
 
  if(!tour_id || !name || !type || !quantity || !price) {
@@ -233,7 +228,7 @@ router.get('/inventory', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/inventory/update', authenticateToken, authorizeRole(['admin', 'manager']), async (req, res) => {
+router.post('/inventory/update', authenticateToken, async (req, res) => {
   const { inventory_id, new_quantity } = req.body;
 
   if (!inventory_id || new_quantity === undefined) {
