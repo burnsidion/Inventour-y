@@ -1,6 +1,9 @@
 import express from 'express';
 import pool from '../utils/database.js';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
+import { authenticateToken } from '../middleware/authenticateToken.js';
 
 const router = express.Router();
 
@@ -25,34 +28,43 @@ router.post('/users', async (req, res) => {
 });
 
 router.post('/users/login', async (req, res) => {
-    const { email, password } = req.body;
-  
-    try {
-      const result = await pool.query(
-        'SELECT * FROM users WHERE email = $1',
-        [email]
-      );
-  
-      if (result.rows.length === 0) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-  
-      const user = result.rows[0];
-  
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        return res.status(401).json({ message: 'Invalid password' });
-      }
-  
-      res.status(200).json({ message: 'Login successful' });
-    } catch (error) {
-      console.error('Error logging in:', error.message);
-      res.status(500).json({ message: 'Internal server error', error: error.message });
+  const { email, password } = req.body;
+
+  try {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    const user = result.rows[0];
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Invalid password' });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email }, 
+      process.env.JWT_SECRET,         
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+    );
+
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+    });
+  } catch (error) {
+    console.error('Error logging in:', error.message);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
 });
 
 //Tour Routes
-router.post('/tours', async (req, res) => {
+router.post('/tours', authenticateToken, async (req, res) => {
   const { user_id, name, start_date, end_date, band_name } = req.body;
 
   try {
@@ -67,7 +79,7 @@ router.post('/tours', async (req, res) => {
   }
 });
 
-router.get('/tours', async (req, res) => {
+router.get('/tours', authenticateToken, async (req, res) => {
   const { user_id } = req.query;
 
   try {
@@ -88,7 +100,7 @@ router.get('/tours', async (req, res) => {
 });
 
 //Show Routes
-router.post('/shows', async (req, res) => {
+router.post('/shows', authenticateToken, async (req, res) => {
   const { tour_id, date, venue, city, state } = req.body;
 
   if (!tour_id || !date || !venue || !city || !state) {
@@ -108,7 +120,7 @@ router.post('/shows', async (req, res) => {
   }
 });
 
-router.get('/shows', async (req, res) => {
+router.get('/shows', authenticateToken, async (req, res) => {
   const { tour_id } = req.query; 
 
   if (!tour_id || isNaN(Number(tour_id))) {
@@ -133,7 +145,7 @@ router.get('/shows', async (req, res) => {
 });
 
 //Inventory routes 
-router.post('/inventory', async (req, res) => {
+router.post('/inventory', authenticateToken, async (req, res) => {
  const { tour_id, name, type, size, quantity, price, image_url } = req.body;
 
  if(!tour_id || !name || !type || !quantity || !price) {
@@ -153,7 +165,7 @@ router.post('/inventory', async (req, res) => {
  }
 });
 
-router.get('/inventory', async (req, res) => {
+router.get('/inventory', authenticateToken, async (req, res) => {
   const { tour_id } = req.query;
 
   if (!tour_id) {
@@ -178,7 +190,7 @@ router.get('/inventory', async (req, res) => {
 });
 
 //Sales routes 
-router.post('/sales', async (req, res) => {
+router.post('/sales', authenticateToken, async (req, res) => {
   const { inventory_id, quantity_sold, total_amount, payment_method } = req.body;
 
   if (!inventory_id || !quantity_sold || !total_amount || !payment_method) {
@@ -237,7 +249,7 @@ router.post('/sales', async (req, res) => {
   }
 });
 
-router.get('/sales', async (req, res) => {
+router.get('/sales', authenticateToken, async (req, res) => {
   const { tour_id } = req.query;
 
   if (!tour_id) {
