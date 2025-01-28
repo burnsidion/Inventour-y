@@ -4,27 +4,35 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 import { authenticateToken } from '../middleware/authenticateToken.js';
+import { authorizeRole } from '../middleware/authorizeRole.js';
 
 const router = express.Router();
 
 //Users Routes
-router.post('/users', async (req, res) => {
-    const { name, email, password } = req.body;
-  
-    try {
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-  
-      const result = await pool.query(
-        'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *',
-        [name, email, hashedPassword]
-      );
-  
-      res.status(201).json({ message: 'User created!', user: result.rows[0] });
-    } catch (err) {
-      console.error('Error creating user:', err);
-      res.status(500).json({ error: 'Failed to create user' });
-    }
+router.post('/users', authenticateToken, async (req, res) => {
+  const { name, email, password, role } = req.body;
+  const validRoles = ['admin', 'manager', 'user'];
+
+  if (req.user.role !== 'admin' && role && role !== 'user') {
+    return res.status(403).json({ error: 'Only admins can assign roles' });
+  }
+
+  const assignedRole = role && validRoles.includes(role) ? role : 'user';
+
+  try {
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    const result = await pool.query(
+      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, email, hashedPassword, assignedRole]
+    );
+
+    res.status(201).json({ message: 'User created!', user: result.rows[0] });
+  } catch (err) {
+    console.error('Error creating user:', err);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
 });
 
 router.put('/users', authenticateToken, async (req, res) => {
@@ -54,7 +62,7 @@ router.put('/users', authenticateToken, async (req, res) => {
   }
 });
 
-router.delete('/users', authenticateToken, async (req, res) => {
+router.delete('/users', authenticateToken, authorizeRole(['admin']),  async (req, res) => {
   const userId = req.user.id;
 
   try {
@@ -70,10 +78,7 @@ router.post('/users/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
@@ -87,8 +92,8 @@ router.post('/users/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email }, 
-      process.env.JWT_SECRET,         
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
     );
 
@@ -184,7 +189,7 @@ router.get('/shows', authenticateToken, async (req, res) => {
 });
 
 //Inventory routes 
-router.post('/inventory', authenticateToken, async (req, res) => {
+router.post('/inventory', authenticateToken, authorizeRole(['admin']), async (req, res) => {
  const { tour_id, name, type, size, quantity, price, image_url } = req.body;
 
  if(!tour_id || !name || !type || !quantity || !price) {
@@ -225,6 +230,33 @@ router.get('/inventory', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching inventory:', error);
     res.status(500).json({ error: 'Failed to fetch inventory items' });
+  }
+});
+
+router.post('/inventory/update', authenticateToken, authorizeRole(['admin', 'manager']), async (req, res) => {
+  const { inventory_id, new_quantity } = req.body;
+
+  if (!inventory_id || new_quantity === undefined) {
+    return res.status(400).json({ error: 'Missing required fields: inventory_id, new_quantity' });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE inventory 
+       SET quantity = $1 
+       WHERE id = $2 
+       RETURNING *`,
+      [new_quantity, inventory_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Inventory item not found' });
+    }
+
+    res.status(200).json({ message: 'Inventory updated successfully', item: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating inventory:', error);
+    res.status(500).json({ error: 'Failed to update inventory' });
   }
 });
 
