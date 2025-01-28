@@ -27,6 +27,45 @@ router.post('/users', async (req, res) => {
     }
 });
 
+router.put('/users', authenticateToken, async (req, res) => {
+  const { name, email, password } = req.body;
+  const userId = req.user.id;
+
+  try {
+    let hashedPassword = null;
+    if (password) {
+      const saltRounds = 10;
+      hashedPassword = await bcrypt.hash(password, saltRounds);
+    }
+
+    const result = await pool.query(
+      `UPDATE users 
+       SET name = COALESCE($1, name), 
+           email = COALESCE($2, email), 
+           password = COALESCE($3, password) 
+       WHERE id = $4 RETURNING id, name, email`,
+      [name, email, hashedPassword, userId]
+    );
+
+    res.status(200).json({ message: 'User updated successfully', user: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+router.delete('/users', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+    res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 router.post('/users/login', async (req, res) => {
   const { email, password } = req.body;
 
