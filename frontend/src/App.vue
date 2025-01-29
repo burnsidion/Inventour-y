@@ -12,9 +12,10 @@ authStore.loadUserFromStorage();
 <template>
   <div id="app">
     <header>
-      <nav>
+      <nav class="flex space-x-4">
         <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/signup">Sign Up</RouterLink>
+        <RouterLink v-if="!authStore.token" to="/signup">Sign Up</RouterLink>
+        <RouterLink v-if="!authStore.token" to="/login">Login</RouterLink>
         <LogoutButton v-if="authStore.token" />
       </nav>
     </header>
