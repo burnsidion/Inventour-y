@@ -2,6 +2,8 @@
 import { RouterLink, RouterView } from 'vue-router'
 import { useAuthStore } from './stores/auth';
 
+import LogoutButton from './components/LogoutButton.vue';
+
 const authStore = useAuthStore();
 
 authStore.loadUserFromStorage();
@@ -13,6 +15,7 @@ authStore.loadUserFromStorage();
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/signup">Sign Up</RouterLink>
+        <LogoutButton v-if="authStore.token" />
       </nav>
     </header>
     <RouterView />
