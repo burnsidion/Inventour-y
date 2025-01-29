@@ -1,7 +1,7 @@
 <template>
-    <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+    <div class="flex flex-col items-center justify-center min-h-screen bg-primary">
     <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-      <h2 class="text-2xl font-bold mb-4 text-center">Login</h2>
+      <h2 class="text-2xl font-bold mb-4 text-center text-[#393f4d]">Login</h2>
       <form @submit.prevent="submitLogin">
         <div class="mb-4">
           <label class="block text-gray-700">Email</label>

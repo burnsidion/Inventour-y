@@ -7,14 +7,14 @@
         :style="{ height: `${heights[i % heights.length]}px` }">
       </div>
     </div>
-  </template>
+</template>
   
   <script setup>
   import { defineProps } from 'vue';
   
   defineProps({
     rows: { type: Number, default: 5 },
-    heights: { type: Array, default: () => [48, 48, 48, 48, 48] }, // Match form field heights
-    containerHeight: { type: Number, default: 400 } // Approximate form height
+    heights: { type: Array, default: () => [48, 48, 48, 48, 48] },
+    containerHeight: { type: Number, default: 400 }
   });
   </script>
