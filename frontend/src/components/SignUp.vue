@@ -33,6 +33,11 @@
 <script setup>
 import { ref } from 'vue';
 import axios from 'axios';
+import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
+
+const authStore = useAuthStore();
+const router = useRouter();
 
 
 const name = ref('');
@@ -48,8 +53,10 @@ const submitForm = async () => {
             password: password.value,
             role: role.value
         })
-        console.log('Signup form submitted', { name: name.value, email: email.value, password: password.value });
         console.log('User created', response.data);
+
+        authStore.setUser(response.data.user, response.data.token);
+        router.push("/");
     } catch(error) {
         console.log('Error signging up', error.response?.data || error.message);
     }

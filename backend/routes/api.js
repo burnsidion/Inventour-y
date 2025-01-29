@@ -23,7 +23,16 @@ router.post('/users', async (req, res) => {
       [name, email, hashedPassword, assignedRole]
     );
 
-    res.status(201).json({ message: 'User created!', user: result.rows[0] });
+    const user = result.rows[0];
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+    );
+
+    res.status(201).json({ message: 'User created!', user, token });
   } catch (err) {
     console.error('Error creating user:', err);
     res.status(500).json({ error: 'Failed to create user' });
