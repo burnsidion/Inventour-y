@@ -3,6 +3,6 @@
 </template>
 
 <script setup>
-import SignUp from '../components/Signup.vue';
+import SignUp from '@/components/SignUp.vue';
 
 </script>
