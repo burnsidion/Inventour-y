@@ -1,11 +1,11 @@
 <script setup>
 import { RouterView } from 'vue-router'
-import { useAuthStore } from './stores/auth';
-import LogoutButton from './components/LogoutButton.vue';
+import { useAuthStore } from './stores/auth'
+import LogoutButton from './components/LogoutButton.vue'
 
-const authStore = useAuthStore();
+const authStore = useAuthStore()
 
-authStore.loadUserFromStorage();
+authStore.loadUserFromStorage()
 </script>
 
 <template>
@@ -17,7 +17,7 @@ authStore.loadUserFromStorage();
 
       <div class="flex space-x-4">
         <RouterLink to="/" class="btn btn-ghost">Home</RouterLink>
-        
+
         <RouterLink v-if="!authStore.token" to="/signup" class="btn btn-ghost">Sign Up</RouterLink>
         <RouterLink v-if="!authStore.token" to="/login" class="btn btn-ghost">Login</RouterLink>
 
@@ -33,11 +33,13 @@ authStore.loadUserFromStorage();
 </template>
 
 <style>
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 0.5s ease-in-out;
 }
 
-.fade-enter, .fade-leave-to {
+.fade-enter,
+.fade-leave-to {
   opacity: 0;
 }
 </style>
