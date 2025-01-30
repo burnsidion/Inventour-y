@@ -7,7 +7,9 @@
         Signup successful! Redirecting...
       </div>
 
-      <form v-if="!signupSuccess" @submit.prevent="submitForm">
+      <SkeletonLoader v-if="loading" :rows="6" :heights="[48, 48, 48, 48, 48, 48]" :padding="50" :minHeight="400" />
+      
+      <form v-if="!signupSuccess && !loading" @submit.prevent="submitForm">
         <p class="text-red-500" v-if="formError">{{ formError }}</p>
 
         <div class="form-control mb-4">
@@ -43,11 +45,13 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useForm, useField } from "vee-validate";
 import * as yup from "yup";
 import axios from "axios";
 import { useRouter } from "vue-router";
+
+import SkeletonLoader from "./SkeletonLoader.vue";
 
 const schema = yup.object({
   name: yup.string().required("Name is required"),
@@ -66,6 +70,8 @@ const router = useRouter();
 
 const signupSuccess = ref(false);
 const formError = ref("");
+
+const loading = ref(true);
 
 const submitForm = handleSubmit(async (values) => {
   try {
@@ -87,4 +93,10 @@ const submitForm = handleSubmit(async (values) => {
     formError.value = error.response?.data?.message || "Signup failed. Please try again.";
   }
 });
+
+onMounted(() => {
+  setTimeout(() => {
+  loading.value = false;
+}, 1800);
+})
 </script>
