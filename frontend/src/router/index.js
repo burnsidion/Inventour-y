@@ -5,6 +5,7 @@ import LoginView from '@/views/LoginView.vue'
 import CreateTour from '@/components/CreateTour.vue'
 import ShowView from '@/views/ShowView.vue'
 import CreateShowView from '@/views/CreateShowView.vue'
+import InventoryView from '@/views/InventoryView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -39,6 +40,12 @@ const router = createRouter({
       name: 'ShowDetails',
       component: ShowView,
     },
+    {
+      path: '/inventory/:id',
+      name: 'InventoryView',
+      component: InventoryView,
+      props: true
+    }
   ],
 })
 
