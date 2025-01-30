@@ -1,7 +1,6 @@
 <template>
   <div class="flex min-h-screen">
     <SidebarMenu />
-
     <div class="flex-1 p-6">
       <h1 class="text-3xl font-bold mb-6">Your Tours</h1>
 
@@ -9,24 +8,35 @@
         <div 
           v-for="tour in tours" 
           :key="tour.id" 
-          class="p-4 bg-white rounded-lg shadow flex justify-between items-center"
+          class="p-4 bg-white rounded-lg shadow"
         >
           <div>
             <h2 class="text-xl font-semibold">{{ tour.name }}</h2>
             <p class="text-gray-600">📅 {{ formatTourDate(tour.start_date) }} - {{ formatTourDate(tour.end_date) }}</p>
-            
-            <!-- Handle when there are no shows -->
-            <div v-if="tour.shows.length > 0">
-              <router-link 
-                v-for="show in tour.shows" 
-                :key="show.id" 
-                :to="`/shows/${show.id}`"
-                class="text-blue-500 hover:underline block"
-              >
-                View Show at {{ show.venue }} - {{ formatTourDate(show.date) }}
-              </router-link>
+
+            <!-- "Create Show" Button -->
+            <button 
+              @click="createShow(tour.id)" 
+              class="btn btn-primary mt-2"
+            >
+              ➕ Create Show
+            </button>
+
+            <!-- Shows List -->
+            <div v-if="tour.shows && tour.shows.length > 0" class="mt-4">
+              <h3 class="text-lg font-semibold">Shows:</h3>
+              <ul>
+                <li v-for="show in tour.shows" :key="show.id">
+                  <router-link 
+                    :to="`/shows/${show.id}`"
+                    class="text-blue-500 hover:underline"
+                  >
+                    📍 {{ show.venue }} - {{ formatTourDate(show.date) }}
+                  </router-link>
+                </li>
+              </ul>
             </div>
-            <p v-else class="text-gray-500">No shows added yet.</p>
+            <p v-else class="text-gray-500 mt-2">No shows added yet.</p>
           </div>
 
           <button 
@@ -40,7 +50,9 @@
 
       <div v-else class="flex flex-col items-center">
         <p class="text-gray-500 text-lg">No tours yet.</p>
-        <button @click="createTour" class="btn btn-primary mt-4 animate-pulse">+ Create Your First Tour</button>
+        <button @click="createTour" class="btn btn-primary mt-4 animate-pulse">
+          + Create Your First Tour
+        </button>
       </div>
     </div>
   </div>
@@ -92,6 +104,11 @@ const fetchTours = async () => {
     console.error('Error fetching tours:', error.response?.data || error.message);
   }
 };
+
+const createShow = (tourId) => {
+    router.push(`/shows/create?tour_id=${tourId}`);
+};
+
 
 const deleteTour = async (tourId) => {
   if (!confirm('Are you sure you want to delete this tour?')) return;
