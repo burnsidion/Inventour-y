@@ -3,6 +3,8 @@ import SignupView from '@/views/SignupView.vue';
 import HomeView from '@/views/HomeView.vue';
 import LoginView from '@/views/LoginView.vue';
 import CreateTour from '@/components/CreateTour.vue';
+import ShowView from '@/views/ShowView.vue';
+import CreateShowView from '@/views/CreateShowView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,6 +28,16 @@ const router = createRouter({
       path: '/create-tour',
       name: 'CreateTour',
       component: CreateTour
+    },
+    {
+      path: '/shows/create',
+      name: 'CreateShow',
+      component: CreateShowView
+    },
+    { 
+      path: '/shows/:id', 
+      name: 'ShowDetails', 
+      component: ShowView 
     }
   ],
 })

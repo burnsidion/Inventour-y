@@ -213,6 +213,27 @@ router.get('/shows', authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/shows/:id', authenticateToken, async (req, res) => {
+  const showId = req.params.id;
+
+  if (!showId || isNaN(Number(showId))) {
+    return res.status(400).json({ error: 'Invalid or missing show ID' });
+  }
+
+  try {
+    const result = await pool.query('SELECT * FROM shows WHERE id = $1', [Number(showId)]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Show not found' });
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching show:', error);
+    res.status(500).json({ error: 'Failed to fetch show' });
+  }
+});
+
 //Inventory routes 
 router.post('/inventory', authenticateToken, async (req, res) => {
  const { tour_id, name, type, size, quantity, price, image_url } = req.body;
