@@ -5,57 +5,78 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- Hard Items -->
       <div>
-        <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">🎸 Hard Items</h2>
+        <div class="flex flex-col gap-1">
+          <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">
+            🎸 Hard Items
+          </h2>
+          <button @click="hardExpanded = !hardExpanded" class="text-sm text-blue-500 mb-2">
+            {{ hardExpanded ? 'Collapse' : 'Expand' }}
+          </button>
+        </div>
 
         <div v-if="hardItems.length > 0" class="grid gap-4 text-[#393f4d]">
-          <div v-for="item in hardItems" :key="item.id" class="p-4 bg-white rounded-lg shadow">
-            <h3 class="font-semibold">{{ item.name }}</h3>
-            <table class="w-full border-collapse">
-              <thead>
-                <tr class="border-b">
-                  <th class="text-left p-2">Quantity</th>
-                  <th class="text-left p-2">Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr class="border-b">
-                  <td class="p-2">{{ item.quantity }}</td>
-                  <td class="p-2">${{ formattedPrice(item.price) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <Transition name="fade">
+            <div v-if="hardExpanded" class="grid gap-4">
+              <div v-for="item in hardItems" :key="item.id" class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce">
+                <h3 class="font-semibold">{{ item.name }}</h3>
+                <table class="w-full border-collapse">
+                  <thead>
+                    <tr class="border-b">
+                      <th class="text-left p-2">Quantity</th>
+                      <th class="text-left p-2">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="border-b">
+                      <td class="p-2">{{ item.quantity }}</td>
+                      <td class="p-2">${{ formattedPrice(item.price) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Transition>
         </div>
         <p v-else class="text-gray-500">No hard items in inventory.</p>
       </div>
 
       <!-- Soft Items -->
       <div>
-        <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">👕 Soft Items</h2>
-
+        <div class="flex flex-col gap-1">
+          <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">
+            👕 Soft Items
+          </h2>
+          <button @click="softExpanded = !softExpanded" class="text-sm text-blue-500 mb-2">
+            {{ softExpanded ? 'Collapse' : 'Expand' }}
+          </button>
+        </div>
         <div v-if="Object.keys(softItemsGrouped).length > 0" class="grid gap-4 text-[#393f4d]">
-          <div
-            v-for="(sizes, name) in softItemsGrouped"
-            :key="name"
-            class="p-4 bg-white rounded-lg shadow"
-          >
-            <h3 class="font-semibold">{{ name }}</h3>
-            <p class="text-gray-600 mb-2">Price: ${{ getSoftItemPrice(name) }}</p>
-            <table class="w-full border-collapse">
-              <thead>
-                <tr class="border-b">
-                  <th class="text-left p-2">Size</th>
-                  <th class="text-left p-2">Quantity</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(quantity, size) in sizes" :key="size" class="border-b">
-                  <td class="p-2">{{ size }}</td>
-                  <td class="p-2">{{ quantity }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <Transition name="fade">
+            <div v-if="softExpanded" class="grid gap-4">
+              <div
+                v-for="(sizes, name) in softItemsGrouped"
+                :key="name"
+                class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce"
+              >
+                <h3 class="font-semibold">{{ name }}</h3>
+                <p class="text-gray-600 mb-2">Price: ${{ getSoftItemPrice(name) }}</p>
+                <table class="w-full border-collapse">
+                  <thead>
+                    <tr class="border-b">
+                      <th class="text-left p-2">Size</th>
+                      <th class="text-left p-2">Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(quantity, size) in sizes" :key="size" class="border-b">
+                      <td class="p-2">{{ size }}</td>
+                      <td class="p-2">{{ quantity }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Transition>
         </div>
         <p v-else class="text-gray-500">No soft items in inventory.</p>
       </div>
@@ -82,6 +103,8 @@ const route = useRoute()
 const inventory = ref([])
 const loading = ref(true)
 const errorMessage = ref('')
+const softExpanded = ref(true)
+const hardExpanded = ref(true)
 
 const fetchInventory = async () => {
   try {
@@ -107,7 +130,7 @@ const formattedPrice = (price) => {
 }
 
 const getSoftItemPrice = (name) => {
-  const item = inventory.value.find(i => i.name === name && i.type === 'soft')
+  const item = inventory.value.find((i) => i.name === name && i.type === 'soft')
   return formattedPrice(item ? item.price : 'N/A')
 }
 
@@ -131,3 +154,14 @@ const softItemsGrouped = computed(() => {
 
 onMounted(fetchInventory)
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease-in-out;
+}
+.fade-enter,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
