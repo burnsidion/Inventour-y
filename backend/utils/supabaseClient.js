@@ -1,13 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 
-dotenv.config(); // Explicitly load environment variables here
+dotenv.config();
 
-// Use the environment variables from your .env file
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
-// Throw an error if either value is missing
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('SUPABASE_URL or SUPABASE_KEY is missing from the environment variables');
 }
