@@ -29,32 +29,32 @@
 </template>
   
   <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
-import { useAuthStore } from '@/stores/auth'
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
+import { useAuthStore } from '@/stores/auth';
 
-const authStore = useAuthStore()
-const router = useRouter()
-const route = useRoute()
+const authStore = useAuthStore();
+const router = useRouter();
+const route = useRoute();
 
-const tourId = ref(null)
-const venue = ref('')
-const city = ref('')
-const state = ref('')
-const date = ref('')
+const tourId = ref(null);
+const venue = ref('');
+const city = ref('');
+const state = ref('');
+const date = ref('');
 
 onMounted(() => {
-  tourId.value = route.query.tour_id
+  tourId.value = route.query.tour_id;
   if (!tourId.value) {
-    console.error('No tour ID provided')
-    router.push('/') // Redirect if no tour_id is present
+    console.error('No tour ID provided');
+    router.push('/'); // Redirect if no tour_id is present
   }
-})
+});
 
 const submitShow = async () => {
   try {
-    const token = authStore.token
+    const token = authStore.token;
     await axios.post(
       'http://localhost:5002/api/shows',
       {
@@ -65,12 +65,12 @@ const submitShow = async () => {
         date: date.value,
       },
       { headers: { Authorization: `Bearer ${token}` } }
-    )
+    );
 
     // Redirect to the tour's page after creating the show
-    router.push('/')
+    router.push('/');
   } catch (error) {
-    console.error('Error creating show:', error.response?.data || error.message)
+    console.error('Error creating show:', error.response?.data || error.message);
   }
-}
+};
 </script>

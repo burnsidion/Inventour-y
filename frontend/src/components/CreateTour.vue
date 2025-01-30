@@ -76,48 +76,48 @@
 </template>
   
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import axios from 'axios'
-import { useAuthStore } from '@/stores/auth'
-import { Field, ErrorMessage, defineRule } from 'vee-validate'
-import { required, min, max } from '@vee-validate/rules'
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import axios from 'axios';
+import { useAuthStore } from '@/stores/auth';
+import { Field, ErrorMessage, defineRule } from 'vee-validate';
+import { required, min, max } from '@vee-validate/rules';
 
-defineRule('required', required)
-defineRule('min', min)
-defineRule('max', max)
+defineRule('required', required);
+defineRule('min', min);
+defineRule('max', max);
 
-const router = useRouter()
-const authStore = useAuthStore()
-const loading = ref(false)
-const errorMessage = ref('')
+const router = useRouter();
+const authStore = useAuthStore();
+const loading = ref(false);
+const errorMessage = ref('');
 
 const tour = ref({
   name: '',
   band_name: '',
   start_date: '',
   end_date: '',
-})
+});
 
 const createTour = async () => {
-  loading.value = true
-  errorMessage.value = ''
+  loading.value = true;
+  errorMessage.value = '';
 
   try {
-    const token = authStore.token
+    const token = authStore.token;
     const response = await axios.post('http://localhost:5002/api/tours', tour.value, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    })
+    });
 
     if (response.status === 201) {
-      router.push('/')
+      router.push('/');
     }
   } catch (error) {
-    errorMessage.value = error.response?.data?.message || 'Failed to create tour'
+    errorMessage.value = error.response?.data?.message || 'Failed to create tour';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 </script>

@@ -39,45 +39,45 @@
 </template>
 
 <script setup>
-import axios from 'axios'
-import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
-import { onMounted, ref } from 'vue'
+import axios from 'axios';
+import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
+import { onMounted, ref } from 'vue';
 
-import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue';
 
-const authStore = useAuthStore()
-const router = useRouter()
+const authStore = useAuthStore();
+const router = useRouter();
 
-const email = ref('')
-const password = ref('')
-const loading = ref(true)
-const showPage = ref(false)
+const email = ref('');
+const password = ref('');
+const loading = ref(true);
+const showPage = ref(false);
 
 const submitLogin = async () => {
   try {
     const response = await axios.post('http://localhost:5002/api/users/login', {
       email: email.value,
       password: password.value,
-    })
-    console.log('Login Successfull!', response.data)
+    });
+    console.log('Login Successfull!', response.data);
 
-    authStore.setUser(response.data.user, response.data.token)
-    router.push('/')
+    authStore.setUser(response.data.user, response.data.token);
+    router.push('/');
   } catch (error) {
-    console.log('Error logging in', error.response?.data || error.message)
+    console.log('Error logging in', error.response?.data || error.message);
   }
-}
+};
 
 onMounted(() => {
   setTimeout(() => {
-    showPage.value = true
-  }, 500)
+    showPage.value = true;
+  }, 500);
 
   setTimeout(() => {
-    loading.value = false
-  }, 1500)
-})
+    loading.value = false;
+  }, 1500);
+});
 </script>
 
 

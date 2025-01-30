@@ -3,9 +3,9 @@
 </template>
 
 <script setup>
-import { useAuthStore } from '@/stores/auth'
-import HomeLoggedOut from '@/components/HomeLoggedOut.vue'
-import HomeLoggedIn from '@/components/HomeLoggedIn.vue'
+import { useAuthStore } from '@/stores/auth';
+import HomeLoggedOut from '@/components/HomeLoggedOut.vue';
+import HomeLoggedIn from '@/components/HomeLoggedIn.vue';
 
-const authStore = useAuthStore()
+const authStore = useAuthStore();
 </script>

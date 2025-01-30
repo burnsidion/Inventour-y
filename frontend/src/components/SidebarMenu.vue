@@ -2,9 +2,7 @@
   <aside class="w-64 h-screen bg-secondary p-6 text-white">
     <h2 class="text-lg font-bold mb-6">Menu</h2>
 
-    <button @click="createTour" class="btn btn-primary w-full mb-4">
-      + Create New Tour
-    </button>
+    <button @click="createTour" class="btn btn-primary w-full mb-4">+ Create New Tour</button>
 
     <nav class="space-y-2">
       <RouterLink to="/" class="block px-4 py-2 hover:bg-gray-700 rounded">🏠 Home</RouterLink>
@@ -20,12 +18,12 @@
 </template>
   
   <script setup>
-import { useRouter } from 'vue-router'
-import LogoutButton from './LogoutButton.vue'
+import { useRouter } from 'vue-router';
+import LogoutButton from './LogoutButton.vue';
 
-const router = useRouter()
+const router = useRouter();
 
 const createTour = () => {
-  router.push('/create-tour')
-}
+  router.push('/create-tour');
+};
 </script>

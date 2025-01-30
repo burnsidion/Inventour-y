@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-import daisyui from 'daisyui'
+import daisyui from 'daisyui';
 export default {
   content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
   theme: {
@@ -17,9 +17,9 @@ export default {
         },
       },
       animation: {
-        bounceOnce: 'bounceOnce 0.4s ease-out'
-      }
+        bounceOnce: 'bounceOnce 0.4s ease-out',
+      },
     },
   },
   plugins: [daisyui],
-}
+};

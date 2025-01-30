@@ -32,94 +32,94 @@
 </template>
   
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
-import { format } from 'date-fns'
-import { useAuthStore } from '@/stores/auth'
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
+import { format } from 'date-fns';
+import { useAuthStore } from '@/stores/auth';
 
-const authStore = useAuthStore()
-const route = useRoute()
-const router = useRouter()
+const authStore = useAuthStore();
+const route = useRoute();
+const router = useRouter();
 
-const show = ref({})
-const inventory = ref([])
-const sales = ref([])
-const loading = ref(true)
-const errorMessage = ref('')
+const show = ref({});
+const inventory = ref([]);
+const sales = ref([]);
+const loading = ref(true);
+const errorMessage = ref('');
 
-console.log('Route Params ID:', route.params.id)
+console.log('Route Params ID:', route.params.id);
 
 // Fetch Show Details
 const fetchShowDetails = async () => {
   try {
-    const token = authStore.token
+    const token = authStore.token;
     const response = await axios.get(`http://localhost:5002/api/shows/${route.params.id}`, {
       headers: { Authorization: `Bearer ${token}` },
-    })
+    });
 
-    show.value = response.data
+    show.value = response.data;
   } catch (error) {
     if (error.response?.status === 404) {
-      errorMessage.value = 'This show does not exist.'
-      router.push('/') // Redirect to homepage
+      errorMessage.value = 'This show does not exist.';
+      router.push('/'); // Redirect to homepage
     } else {
-      errorMessage.value = 'Failed to load show details.'
+      errorMessage.value = 'Failed to load show details.';
     }
   }
-}
+};
 
 // Fetch Inventory for the Show's Tour
 const fetchInventory = async () => {
   try {
-    const token = authStore.token
+    const token = authStore.token;
     const response = await axios.get(
       `http://localhost:5002/api/inventory?tour_id=${show.value.tour_id}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
-    )
-    inventory.value = response.data
+    );
+    inventory.value = response.data;
   } catch (error) {
     if (error.response?.status === 404) {
-      console.warn('No inventory found for this tour.')
-      inventory.value = [] // Prevents failure messages
+      console.warn('No inventory found for this tour.');
+      inventory.value = []; // Prevents failure messages
     } else {
-      errorMessage.value = 'Failed to load inventory.'
+      errorMessage.value = 'Failed to load inventory.';
     }
   }
-}
+};
 
 // Fetch Sales for the Show
 const fetchSales = async () => {
   try {
-    const token = authStore.token
+    const token = authStore.token;
     const response = await axios.get(`http://localhost:5002/api/sales?show_id=${show.value.id}`, {
       headers: { Authorization: `Bearer ${token}` },
-    })
-    sales.value = response.data
+    });
+    sales.value = response.data;
   } catch (error) {
     if (error.response?.status === 404) {
-      console.warn('No sales found for this show.')
-      sales.value = []
+      console.warn('No sales found for this show.');
+      sales.value = [];
     } else {
-      errorMessage.value = 'Failed to load sales.'
+      errorMessage.value = 'Failed to load sales.';
     }
   }
-}
+};
 
 const formatShowDate = (dateString) => {
-  return format(new Date(dateString), 'MMM dd, yyyy')
-}
+  return format(new Date(dateString), 'MMM dd, yyyy');
+};
 
 onMounted(async () => {
-  await fetchShowDetails()
+  await fetchShowDetails();
   if (show.value.tour_id) {
-    await fetchInventory()
+    await fetchInventory();
   }
   if (show.value.id) {
-    await fetchSales()
+    await fetchSales();
   }
-  loading.value = false
-})
+  loading.value = false;
+});
 </script>
