@@ -156,6 +156,22 @@ router.get("/tours", authenticateToken, async (req, res) => {
   }
 });
 
+router.get("/tours/:id", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query("SELECT * FROM tours WHERE id = $1", [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Tour not found" });
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error("Error fetching tour:", error);
+    res.status(500).json({ error: "Failed to fetch tour" });
+  }
+});
+
 router.delete("/tours/:id", authenticateToken, async (req, res) => {
   const tourId = req.params.id;
   const userId = req.user.id;
@@ -186,11 +202,9 @@ router.post("/shows", authenticateToken, async (req, res) => {
   const { tour_id, date, venue, city, state } = req.body;
 
   if (!tour_id || !date || !venue || !city || !state) {
-    return res
-      .status(400)
-      .json({
-        error: "Missing required fields: tour_id, date, venue, city, state",
-      });
+    return res.status(400).json({
+      error: "Missing required fields: tour_id, date, venue, city, state",
+    });
   }
 
   try {
@@ -260,11 +274,9 @@ router.post("/inventory", authenticateToken, async (req, res) => {
   const { tour_id, name, type, size, quantity, price, image_url } = req.body;
 
   if (!tour_id || !name || !type || !quantity || !price) {
-    return res
-      .status(400)
-      .json({
-        error: "Missing required fields: tour_id, name, type, quantity, price",
-      });
+    return res.status(400).json({
+      error: "Missing required fields: tour_id, name, type, quantity, price",
+    });
   }
 
   try {
@@ -332,12 +344,10 @@ router.post("/inventory/update", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: "Inventory item not found" });
     }
 
-    res
-      .status(200)
-      .json({
-        message: "Inventory updated successfully",
-        item: result.rows[0],
-      });
+    res.status(200).json({
+      message: "Inventory updated successfully",
+      item: result.rows[0],
+    });
   } catch (error) {
     console.error("Error updating inventory:", error);
     res.status(500).json({ error: "Failed to update inventory" });
