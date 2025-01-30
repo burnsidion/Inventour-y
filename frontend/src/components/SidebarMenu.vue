@@ -2,7 +2,7 @@
   <aside class="w-64 h-screen bg-secondary p-6 text-white">
     <h2 class="text-lg font-bold mb-6">Menu</h2>
 
-    <button @click="createTour" class="btn btn-primary w-full mb-4 animate-pulse">
+    <button @click="createTour" class="btn btn-primary w-full mb-4">
       + Create New Tour
     </button>
 
