@@ -7,19 +7,31 @@
       <div v-if="tours.length > 0" class="grid gap-4">
         <div v-for="tour in tours" :key="tour.id" class="p-4 bg-white rounded-lg shadow">
           <div>
-            <h2 class="text-xl font-semibold">{{ tour.name }}</h2>
+            <h2 class="text-xl font-semibold text-[#393f4d]">{{ tour.name }}</h2>
             <p class="text-gray-600">
               📅 {{ formatTourDate(tour.start_date) }} - {{ formatTourDate(tour.end_date) }}
             </p>
 
-            <!-- "Create Show" Button -->
-            <button @click="createShow(tour.id)" class="btn btn-primary mt-2">
-              ➕ Create Show
-            </button>
+            <div class="flex justify-between gap-4">
+              <div class="flex gap-4">
+                <router-link :to="`/inventory/${tour.id}`" class="btn btn-secondary mt-2">
+                  📦 Manage Inventory
+                </router-link>
+                <!-- "Create Show" Button -->
+                <button @click="createShow(tour.id)" class="btn btn-primary mt-2">
+                  ➕ Create Show
+                </button>
+              </div>
+              <div>
+                <button @click="deleteTour(tour.id)" class="btn btn-error text-white mt-2">
+                  🗑  Delete Tour
+                </button>
+              </div>
+            </div>
 
             <!-- Shows List -->
             <div v-if="tour.shows && tour.shows.length > 0" class="mt-4">
-              <h3 class="text-lg font-semibold">Shows:</h3>
+              <h3 class="text-lg font-semibold text-[#393f4d]">Shows:</h3>
               <ul>
                 <li v-for="show in tour.shows" :key="show.id">
                   <router-link :to="`/shows/${show.id}`" class="text-blue-500 hover:underline">
@@ -30,10 +42,6 @@
             </div>
             <p v-else class="text-gray-500 mt-2">No shows added yet.</p>
           </div>
-
-          <button @click="deleteTour(tour.id)" class="btn btn-error text-white">
-            🗑 Delete Tour
-          </button>
         </div>
       </div>
 
