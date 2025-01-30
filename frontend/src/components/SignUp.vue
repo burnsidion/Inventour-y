@@ -3,12 +3,16 @@
     <div class="card w-96 bg-ivory shadow-xl p-6">
       <h2 class="text-2xl font-bold text-center text-bg-primary text-[#393f4d]">Sign Up</h2>
 
-      <div v-if="signupSuccess" class="alert alert-success">
-        Signup successful! Redirecting...
-      </div>
+      <div v-if="signupSuccess" class="alert alert-success">Signup successful! Redirecting...</div>
 
-      <SkeletonLoader v-if="loading" :rows="6" :heights="[48, 48, 48, 48, 48, 48]" :padding="50" :minHeight="400" />
-      
+      <SkeletonLoader
+        v-if="loading"
+        :rows="6"
+        :heights="[48, 48, 48, 48, 48, 48]"
+        :padding="50"
+        :minHeight="400"
+      />
+
       <form v-if="!signupSuccess && !loading" @submit.prevent="submitForm">
         <p class="text-red-500" v-if="formError">{{ formError }}</p>
 
@@ -45,58 +49,61 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
-import { useForm, useField } from "vee-validate";
-import * as yup from "yup";
-import axios from "axios";
-import { useRouter } from "vue-router";
+import { onMounted, ref } from 'vue'
+import { useForm, useField } from 'vee-validate'
+import * as yup from 'yup'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
 
-import SkeletonLoader from "./SkeletonLoader.vue";
+import SkeletonLoader from './SkeletonLoader.vue'
 
 const schema = yup.object({
-  name: yup.string().required("Name is required"),
-  email: yup.string().email("Invalid email format").required("Email is required"),
-  password: yup.string().min(6, "Password must be at least 6 characters").required("Password is required"),
-});
+  name: yup.string().required('Name is required'),
+  email: yup.string().email('Invalid email format').required('Email is required'),
+  password: yup
+    .string()
+    .min(6, 'Password must be at least 6 characters')
+    .required('Password is required'),
+})
 
-const { handleSubmit } = useForm({ validationSchema: schema });
+const { handleSubmit } = useForm({ validationSchema: schema })
 
-const { value: name, errorMessage: nameError } = useField("name");
-const { value: email, errorMessage: emailError } = useField("email");
-const { value: password, errorMessage: passwordError } = useField("password");
+const { value: name, errorMessage: nameError } = useField('name')
+const { value: email, errorMessage: emailError } = useField('email')
+const { value: password, errorMessage: passwordError } = useField('password')
 
-const role = "user"; 
-const router = useRouter();
+const role = 'user'
+const router = useRouter()
 
-const signupSuccess = ref(false);
-const formError = ref("");
+const signupSuccess = ref(false)
+const formError = ref('')
 
-const loading = ref(true);
+const loading = ref(true)
 
 const submitForm = handleSubmit(async (values) => {
   try {
-    const response = await axios.post("http://localhost:5002/api/users", {
+    const response = await axios.post('http://localhost:5002/api/users', {
       name: values.name,
       email: values.email,
       password: values.password,
       role: role,
-    });
+    })
 
-    console.log("✅ User created:", response.data);
-    signupSuccess.value = true;
+    console.log('✅ User created:', response.data)
+    signupSuccess.value = true
 
     setTimeout(() => {
-      router.push("/login"); 
-    }, 2000);
+      router.push('/login')
+    }, 2000)
   } catch (error) {
-    console.error("🚨 Error signing up:", error.response?.data || error.message);
-    formError.value = error.response?.data?.message || "Signup failed. Please try again.";
+    console.error('🚨 Error signing up:', error.response?.data || error.message)
+    formError.value = error.response?.data?.message || 'Signup failed. Please try again.'
   }
-});
+})
 
 onMounted(() => {
   setTimeout(() => {
-  loading.value = false;
-}, 1800);
+    loading.value = false
+  }, 1800)
 })
 </script>
