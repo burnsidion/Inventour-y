@@ -2,41 +2,67 @@
   <div class="p-6">
     <h1 class="text-3xl font-bold mb-6">Inventory for Tour</h1>
 
-    <div v-if="loading" class="text-gray-500">Loading inventory...</div>
-    <div v-else-if="errorMessage" class="text-red-500">{{ errorMessage }}</div>
-    <div v-else>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Hard Items Column -->
-        <div>
-          <h2 class="text-2xl font-semibold mb-4 text-center md:text-left">🎸 Hard Items</h2>
-          <div v-if="hardItems.length > 0" class="space-y-4">
-            <div v-for="item in hardItems" :key="item.id" class="p-4 bg-white shadow rounded-lg">
-              <h3 class="text-lg font-bold text-[#393f4d]">{{ item.name }}</h3>
-              <p>Quantity: {{ item.quantity }}</p>
-              <p>Price: ${{ item.price.toFixed(2) }}</p>
-            </div>
-          </div>
-          <p v-else class="text-gray-500">No hard items added yet.</p>
-        </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Hard Items -->
+      <div>
+        <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">🎸 Hard Items</h2>
 
-        <!-- Soft Items Column -->
-        <div>
-          <h2 class="text-2xl font-semibold mb-4 text-center md:text-left">👕 Soft Items</h2>
-          <div v-if="softItems.length > 0" class="space-y-4">
-            <div v-for="item in softItems" :key="item.id" class="p-4 bg-white shadow rounded-lg text-[#393f4d]">
-              <h3 class="text-lg font-bold">{{ item.name }}</h3>
-              <p>Size: {{ item.size || 'N/A' }}</p>
-              <p>Quantity: {{ item.quantity }}</p>
-              <p>Price: ${{ item.price.toFixed(2) }}</p>
-            </div>
+        <div v-if="hardItems.length > 0" class="grid gap-4 text-[#393f4d]">
+          <div v-for="item in hardItems" :key="item.id" class="p-4 bg-white rounded-lg shadow">
+            <h3 class="font-semibold">{{ item.name }}</h3>
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="border-b">
+                  <th class="text-left p-2">Quantity</th>
+                  <th class="text-left p-2">Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b">
+                  <td class="p-2">{{ item.quantity }}</td>
+                  <td class="p-2">${{ formattedPrice(item.price) }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <p v-else class="text-gray-500">No soft items added yet.</p>
         </div>
+        <p v-else class="text-gray-500">No hard items in inventory.</p>
+      </div>
+
+      <!-- Soft Items -->
+      <div>
+        <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">👕 Soft Items</h2>
+
+        <div v-if="Object.keys(softItemsGrouped).length > 0" class="grid gap-4 text-[#393f4d]">
+          <div
+            v-for="(sizes, name) in softItemsGrouped"
+            :key="name"
+            class="p-4 bg-white rounded-lg shadow"
+          >
+            <h3 class="font-semibold">{{ name }}</h3>
+            <p class="text-gray-600 mb-2">Price: ${{ getSoftItemPrice(name) }}</p>
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="border-b">
+                  <th class="text-left p-2">Size</th>
+                  <th class="text-left p-2">Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(quantity, size) in sizes" :key="size" class="border-b">
+                  <td class="p-2">{{ size }}</td>
+                  <td class="p-2">{{ quantity }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p v-else class="text-gray-500">No soft items in inventory.</p>
       </div>
     </div>
 
-    <!-- Button to Add Inventory -->
-    <div class="mt-6 flex justify-center">
+    <!-- Add Inventory Button -->
+    <div class="flex justify-center mt-6">
       <router-link :to="`/inventory/add?tour_id=${route.params.id}`" class="btn btn-primary">
         ➕ Add Inventory
       </router-link>
@@ -75,24 +101,33 @@ const fetchInventory = async () => {
   }
 }
 
-// **Computed properties with type safety**
-const hardItems = computed(() =>
-  inventory.value
-    .filter((item) => item.type === 'hard')
-    .map((item) => ({
-      ...item,
-      price: Number(item.price) || 0, // Ensure price is a number
-    }))
-)
+const formattedPrice = (price) => {
+  const numPrice = parseFloat(price)
+  return !isNaN(numPrice) ? numPrice.toFixed(2) : 'N/A'
+}
 
-const softItems = computed(() =>
-  inventory.value
-    .filter((item) => item.type === 'soft')
-    .map((item) => ({
-      ...item,
-      price: Number(item.price) || 0, // Ensure price is a number
-    }))
-)
+const getSoftItemPrice = (name) => {
+  const item = inventory.value.find(i => i.name === name && i.type === 'soft')
+  return formattedPrice(item ? item.price : 'N/A')
+}
+
+const hardItems = computed(() => {
+  return inventory.value.filter((item) => item.type === 'hard')
+})
+
+const softItemsGrouped = computed(() => {
+  const grouped = {}
+
+  inventory.value.forEach((item) => {
+    if (item.type === 'soft') {
+      if (!grouped[item.name]) {
+        grouped[item.name] = {}
+      }
+      grouped[item.name][item.size || 'One Size'] = item.quantity
+    }
+  })
+  return grouped
+})
 
 onMounted(fetchInventory)
 </script>
