@@ -11,37 +11,22 @@
         <!-- Inventory Section -->
         <h3 class="text-xl font-bold mt-6">Inventory</h3>
         <div v-if="inventory.length > 0" class="grid gap-4 mt-2">
-          <div 
-            v-for="item in inventory" 
-            :key="item.id" 
-            class="p-4 bg-white rounded-lg shadow flex justify-between items-center"
-          >
-            <div>
-              <h4 class="text-lg font-semibold">{{ item.name }} ({{ item.type }})</h4>
-              <p class="text-gray-600">Stock: {{ item.quantity }}</p>
-              <p class="text-gray-600">${{ item.price }} each</p>
-            </div>
-          </div>
+        <div v-for="item in inventory" :key="item.id" class="p-4 bg-white rounded-lg shadow">
+            <h4 class="text-lg font-semibold">{{ item.name }} ({{ item.type }})</h4>
+            <p class="text-gray-600">Stock: {{ item.quantity }}</p>
+            <p class="text-gray-600">${{ item.price }} each</p>
         </div>
-        <p v-else class="text-gray-500">No inventory added yet.</p>
-  
-        <!-- Sales Section -->
+        </div>
+        <p v-else class="text-gray-500">No inventory items added yet.</p>
+
         <h3 class="text-xl font-bold mt-6">Sales</h3>
         <div v-if="sales.length > 0" class="grid gap-4 mt-2">
-          <div 
-            v-for="sale in sales" 
-            :key="sale.id" 
-            class="p-4 bg-white rounded-lg shadow flex justify-between items-center"
-          >
-            <div>
-              <h4 class="text-lg font-semibold">{{ sale.item_name }}</h4>
-              <p class="text-gray-600">Sold: {{ sale.quantity_sold }}</p>
-              <p class="text-gray-600">Payment: {{ sale.payment_method }}</p>
-              <p class="text-gray-600">Total: ${{ sale.total_amount }}</p>
-            </div>
-          </div>
+        <div v-for="sale in sales" :key="sale.id" class="p-4 bg-white rounded-lg shadow">
+            <p class="text-gray-600">{{ sale.quantity_sold }}x {{ sale.item_name }} sold</p>
+            <p class="text-gray-600">Total: ${{ sale.total_amount }}</p>
         </div>
-        <p v-else class="text-gray-500">No sales recorded yet.</p>
+        </div>
+        <p v-else class="text-gray-500">No sales recorded for this tour yet.</p>
       </div>
     </div>
 </template>
@@ -86,32 +71,38 @@ const fetchShowDetails = async () => {
   
 // Fetch Inventory for the Show's Tour
 const fetchInventory = async () => {
-    try {
-        const token = authStore.token;
-        const response = await axios.get(`http://localhost:5002/api/inventory?tour_id=${show.value.tour_id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-
-        inventory.value = response.data || [];
-    } catch (error) {
-        console.error('Error fetching inventory:', error.response?.data || error.message);
-        errorMessage.value = 'No inventory available for this tour.';
+  try {
+    const token = authStore.token;
+    const response = await axios.get(`http://localhost:5002/api/inventory?tour_id=${show.value.tour_id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    inventory.value = response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      console.warn("No inventory found for this tour.");
+      inventory.value = []; // Prevents failure messages
+    } else {
+      errorMessage.value = "Failed to load inventory.";
     }
+  }
 };
-  
-// Fetch Sales for the Show's Tour
-const fetchSales = async () => {
-    try {
-        const token = authStore.token;
-        const response = await axios.get(`http://localhost:5002/api/sales?tour_id=${show.value.tour_id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
 
-        sales.value = response.data || [];
-    } catch (error) {
-        console.error('Error fetching sales:', error.response?.data || error.message);
-        errorMessage.value = 'Failed to load sales';
+// Fetch Sales for the Show
+const fetchSales = async () => {
+  try {
+    const token = authStore.token;
+    const response = await axios.get(`http://localhost:5002/api/sales?show_id=${show.value.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    sales.value = response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      console.warn("No sales found for this show.");
+      sales.value = [];
+    } else {
+      errorMessage.value = "Failed to load sales.";
     }
+  }
 };
   
 const formatShowDate = (dateString) => {
@@ -119,11 +110,13 @@ const formatShowDate = (dateString) => {
 };
   
 onMounted(async () => {
-    await fetchShowDetails();
-    if (show.value.tour_id) {
-        await fetchInventory();
-        await fetchSales();
-    }
-    loading.value = false;
+  await fetchShowDetails();
+  if (show.value.tour_id) {
+    await fetchInventory();
+  }
+  if (show.value.id) { 
+    await fetchSales();
+  }
+  loading.value = false;
 });
   </script>
