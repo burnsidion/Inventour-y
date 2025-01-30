@@ -8,7 +8,7 @@
 
       <!-- Tours List -->
       <div v-if="tours.length > 0" class="flex flex-col gap-4">
-        <div v-for="tour in tours" :key="tour.id" class="p-4 bg-white rounded-lg shadow w-full">
+        <div v-for="tour in tours" :key="tour.id" class="p-4 bg-white rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce">
           <div>
             <h2 class="text-xl font-semibold text-center md:text-left text-[#393f4d]">
               {{ tour.name }}
