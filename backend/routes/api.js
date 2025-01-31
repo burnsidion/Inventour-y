@@ -271,23 +271,42 @@ router.get("/shows/:id", authenticateToken, async (req, res) => {
 
 //Inventory routes
 router.post("/inventory", authenticateToken, async (req, res) => {
-  const { tour_id, name, type, size, quantity, price, image_url } = req.body;
+  const { tour_id, name, type, sizes, quantity, price, image_url } = req.body;
 
-  if (!tour_id || !name || !type || !quantity || !price) {
+  if (!tour_id || !name || !type || !price || (type === "hard" && !quantity)) {
     return res.status(400).json({
-      error: "Missing required fields: tour_id, name, type, quantity, price",
+      error:
+        "Missing required fields: tour_id, name, type, quantity (if hard item), price",
     });
   }
 
   try {
+    if (type === "soft" && sizes && Object.keys(sizes).length > 0) {
+      const inventoryItems = [];
+
+      for (const [size, qty] of Object.entries(sizes)) {
+        const result = await pool.query(
+          `INSERT INTO inventory (tour_id, name, type, size, quantity, price, image_url) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+          [tour_id, name, type, size, qty, price, image_url || null]
+        );
+        inventoryItems.push(result.rows[0]);
+      }
+
+      return res
+        .status(201)
+        .json({ message: "Soft inventory items added", items: inventoryItems });
+    }
+
     const result = await pool.query(
       `INSERT INTO inventory (tour_id, name, type, size, quantity, price, image_url) 
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [tour_id, name, type, size || null, quantity, price, image_url || null]
+      [tour_id, name, type, null, quantity, price, image_url || null]
     );
+
     res
       .status(201)
-      .json({ message: "Inventory items added", itme: result.rows[0] });
+      .json({ message: "Hard inventory item added", item: result.rows[0] });
   } catch (error) {
     console.error("Error adding inventory", error);
     res.status(500).json({ error: "Failed to add inventory item" });
