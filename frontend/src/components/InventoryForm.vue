@@ -1,12 +1,12 @@
 <template>
   <div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md">
-    <h1 class="text-2xl font-semibold mb-4">Add Inventory</h1>
+    <h1 class="text-2xl font-semibold mb-4 text-[#393f4d]">Add Inventory</h1>
 
     <form @submit.prevent="submitInventory">
-      <label class="block mb-2">Item Name</label>
+      <label class="block mb-2 text-[#393f4d]">Item Name</label>
       <input v-model="name" type="text" class="input input-bordered w-full" required />
 
-      <label class="block mt-4 mb-2">Type</label>
+      <label class="block mt-4 mb-2 text-[#393f4d]">Type</label>
       <select v-model="type" class="select select-bordered w-full">
         <option value="hard">Hard Item (CD, Vinyl, Posters)</option>
         <option value="soft">Soft Item (T-Shirts, Hoodies)</option>
@@ -32,11 +32,11 @@
       </div>
 
       <div v-if="type === 'hard'">
-        <label class="block mt-4 mb-2">Quantity</label>
+        <label class="block mt-4 mb-2 text-[#393f4d]">Quantity</label>
         <input v-model="quantity" type="number" class="input input-bordered w-full" required />
       </div>
 
-      <label class="block mt-4 mb-2">Price ($)</label>
+      <label class="block mt-4 mb-2 text-[#393f4d]">Price ($)</label>
       <input
         v-model="price"
         type="number"

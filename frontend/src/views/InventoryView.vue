@@ -1,6 +1,8 @@
 <template>
   <div class="p-6">
-    <h1 class="text-3xl font-bold mb-6">Inventory for Tour</h1>
+    <!-- Dynamic tour name -->
+    <h1 class="text-3xl font-bold mb-6">Inventory for {{ tourName || 'Tour' }}</h1>
+
     <!-- Add Inventory Button -->
     <div class="flex justify-center mt-6 mb-4">
       <router-link :to="`/inventory/add?tour_id=${route.params.id}`" class="btn btn-primary">
@@ -9,7 +11,7 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Hard Items -->
+      <!-- Hard Items Section -->
       <div>
         <div class="flex flex-col gap-1">
           <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">
@@ -55,7 +57,7 @@
         <p v-else class="text-gray-500">No hard items in inventory.</p>
       </div>
 
-      <!-- Soft Items -->
+      <!-- Soft Items Section -->
       <div>
         <div class="flex flex-col gap-1">
           <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">
@@ -127,6 +129,7 @@ const loading = ref(true);
 const errorMessage = ref('');
 const softExpanded = ref(true);
 const hardExpanded = ref(true);
+const tourName = ref('');
 
 const fetchInventory = async () => {
   try {
@@ -143,6 +146,21 @@ const fetchInventory = async () => {
     console.error('Error fetching inventory:', error);
   } finally {
     loading.value = false;
+  }
+};
+
+const fetchTourDetails = async () => {
+  try {
+    const token = authStore.token;
+    const response = await axios.get(`http://localhost:5002/api/tours/${route.params.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.data && response.data.name) {
+      tourName.value = response.data.name;
+    }
+  } catch (error) {
+    console.error('Error fetching tour details', error);
   }
 };
 
@@ -204,7 +222,9 @@ const softItemsGrouped = computed(() => {
   return grouped;
 });
 
-onMounted(fetchInventory);
+onMounted(async () => {
+  await Promise.all([fetchTourDetails(), fetchInventory()]);
+});
 </script>
 
 <style scoped>
