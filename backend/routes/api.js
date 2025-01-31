@@ -354,6 +354,26 @@ router.post("/inventory/update", authenticateToken, async (req, res) => {
   }
 });
 
+router.delete("/inventory/:id", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "DELETE FROM inventory WHERE id = $1 RETURNING *",
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Inventory item not found" });
+    }
+
+    res.status(200).json({ message: "Item deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting inventory:", error);
+    res.status(500).json({ message: "Failed to delete inventory item" });
+  }
+});
+
 //Sales routes
 router.post("/sales", authenticateToken, async (req, res) => {
   const { inventory_id, quantity_sold, total_amount, payment_method } =
