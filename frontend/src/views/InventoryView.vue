@@ -37,6 +37,11 @@
                     </tr>
                   </tbody>
                 </table>
+                <div class="flex justify-center">
+                  <button @click="deleteItem(item.id)" class="btn btn-error text-white mt-2">
+                    🗑 Delete Item
+                  </button>
+                </div>
               </div>
             </div>
           </Transition>
@@ -78,6 +83,11 @@
                     </tr>
                   </tbody>
                 </table>
+                <div class="flex justify-center">
+                  <button @click="deleteItem(item.id)" class="btn btn-error text-white mt-2">
+                    🗑 Delete Item
+                  </button>
+                </div>
               </div>
             </div>
           </Transition>
@@ -136,6 +146,22 @@ const formattedPrice = (price) => {
 const getSoftItemPrice = (name) => {
   const item = inventory.value.find((i) => i.name === name && i.type === 'soft');
   return formattedPrice(item ? item.price : 'N/A');
+};
+
+const deleteItem = async (itemId) => {
+  if (!confirm('Are you sure you want to delete this item?')) return;
+
+  try {
+    const token = authStore.token;
+    await axios.delete(`http://localhost:5002/api/inventory/${itemId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    // Update inventory after deletion
+    inventory.value = inventory.value.filter((item) => item.id !== itemId);
+  } catch (error) {
+    console.error('Error deleting inventory item:', error);
+  }
 };
 
 const hardItems = computed(() => {

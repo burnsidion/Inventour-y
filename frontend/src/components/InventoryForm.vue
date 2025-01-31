@@ -34,6 +34,12 @@
 
       <button type="submit" class="btn btn-primary mt-4 w-full">➕ Add Inventory Item</button>
     </form>
+    <button
+      @click="cancelSubmit"
+      class="btn btn-primary mt-4 w-full bg-red-500 text-white px-4 py-2 hover:bg-red-600 transition"
+    >
+      Cancel
+    </button>
   </div>
 </template>
   
@@ -81,5 +87,9 @@ const submitInventory = async () => {
   } catch (error) {
     console.error('Error adding inventory:', error);
   }
+};
+
+const cancelSubmit = () => {
+  router.push(`/tours/${route.query.tour_id}/inventory`);
 };
 </script>
