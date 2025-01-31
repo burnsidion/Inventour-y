@@ -38,20 +38,20 @@
 </template>
   
   <script setup>
-import { ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
-import { useAuthStore } from '@/stores/auth'
+import { ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
+import { useAuthStore } from '@/stores/auth';
 
-const authStore = useAuthStore()
-const route = useRoute()
-const router = useRouter()
+const authStore = useAuthStore();
+const route = useRoute();
+const router = useRouter();
 
-const name = ref('')
-const type = ref('hard')
-const size = ref('')
-const quantity = ref(0)
-const price = ref(0)
+const name = ref('');
+const type = ref('hard');
+const size = ref('');
+const quantity = ref(0);
+const price = ref(0);
 
 const submitInventory = async () => {
   console.log('Submitting Inventory:', {
@@ -61,14 +61,14 @@ const submitInventory = async () => {
     size: size.value || null,
     quantity: quantity.value,
     price: price.value,
-  })
+  });
 
   try {
-    const token = authStore.token
+    const token = authStore.token;
     await axios.post(
       'http://localhost:5002/api/inventory',
       {
-        tour_id: route.query.tour_id, // This might be undefined
+        tour_id: route.query.tour_id,
         name: name.value,
         type: type.value,
         size: size.value || null,
@@ -76,11 +76,10 @@ const submitInventory = async () => {
         price: price.value,
       },
       { headers: { Authorization: `Bearer ${token}` } }
-    )
-
-    router.push('/') // Redirect back to HomeLoggedIn page
+    );
+    router.push(`/tours/${route.query.tour_id}/inventory`);
   } catch (error) {
-    console.error('Error adding inventory:', error)
+    console.error('Error adding inventory:', error);
   }
-}
+};
 </script>

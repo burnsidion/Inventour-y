@@ -17,7 +17,11 @@
         <div v-if="hardItems.length > 0" class="grid gap-4 text-[#393f4d]">
           <Transition name="fade">
             <div v-if="hardExpanded" class="grid gap-4">
-              <div v-for="item in hardItems" :key="item.id" class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce">
+              <div
+                v-for="item in hardItems"
+                :key="item.id"
+                class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce"
+              >
                 <h3 class="font-semibold">{{ item.name }}</h3>
                 <table class="w-full border-collapse">
                   <thead>
@@ -92,67 +96,67 @@
 </template>
   
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import axios from 'axios'
-import { useAuthStore } from '@/stores/auth'
+import { ref, onMounted, computed } from 'vue';
+import { useRoute } from 'vue-router';
+import axios from 'axios';
+import { useAuthStore } from '@/stores/auth';
 
-const authStore = useAuthStore()
-const route = useRoute()
+const authStore = useAuthStore();
+const route = useRoute();
 
-const inventory = ref([])
-const loading = ref(true)
-const errorMessage = ref('')
-const softExpanded = ref(true)
-const hardExpanded = ref(true)
+const inventory = ref([]);
+const loading = ref(true);
+const errorMessage = ref('');
+const softExpanded = ref(true);
+const hardExpanded = ref(true);
 
 const fetchInventory = async () => {
   try {
-    const token = authStore.token
+    const token = authStore.token;
     const response = await axios.get(
       `http://localhost:5002/api/inventory?tour_id=${route.params.id}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
-    )
-    inventory.value = response.data
+    );
+    inventory.value = response.data;
   } catch (error) {
-    errorMessage.value = 'Failed to load inventory.'
-    console.error('Error fetching inventory:', error)
+    errorMessage.value = 'Failed to load inventory.';
+    console.error('Error fetching inventory:', error);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 const formattedPrice = (price) => {
-  const numPrice = parseFloat(price)
-  return !isNaN(numPrice) ? numPrice.toFixed(2) : 'N/A'
-}
+  const numPrice = parseFloat(price);
+  return !isNaN(numPrice) ? numPrice.toFixed(2) : 'N/A';
+};
 
 const getSoftItemPrice = (name) => {
-  const item = inventory.value.find((i) => i.name === name && i.type === 'soft')
-  return formattedPrice(item ? item.price : 'N/A')
-}
+  const item = inventory.value.find((i) => i.name === name && i.type === 'soft');
+  return formattedPrice(item ? item.price : 'N/A');
+};
 
 const hardItems = computed(() => {
-  return inventory.value.filter((item) => item.type === 'hard')
-})
+  return inventory.value.filter((item) => item.type === 'hard');
+});
 
 const softItemsGrouped = computed(() => {
-  const grouped = {}
+  const grouped = {};
 
   inventory.value.forEach((item) => {
     if (item.type === 'soft') {
       if (!grouped[item.name]) {
-        grouped[item.name] = {}
+        grouped[item.name] = {};
       }
-      grouped[item.name][item.size || 'One Size'] = item.quantity
+      grouped[item.name][item.size || 'One Size'] = item.quantity;
     }
-  })
-  return grouped
-})
+  });
+  return grouped;
+});
 
-onMounted(fetchInventory)
+onMounted(fetchInventory);
 </script>
 
 <style scoped>

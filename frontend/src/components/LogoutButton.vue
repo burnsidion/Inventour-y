@@ -10,11 +10,15 @@
 </template>
 
 <script setup>
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
 
-const authStore = useAuthStore()
+const router = useRouter();
+
+const authStore = useAuthStore();
 
 const handleLogout = () => {
-  authStore.logout()
-}
+  authStore.logout();
+  router.push('/login');
+};
 </script>
