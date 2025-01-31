@@ -1,64 +1,83 @@
 <template>
   <div class="p-6">
     <!-- Show Header -->
-    <h1 class="text-3xl font-bold mb-4">📊 Sales Tracker for {{ showVenue }}</h1>
-    <p class="text-ivory-600 mb-6">{{ formatShowDate(showDate) }}</p>
+    <h1 class="text-3xl font-bold mb-4 text-center">📊 Sales Tracker for {{ showVenue }}</h1>
+    <p class="text-ivory-600 mb-6 text-center">{{ formatShowDate(showDate) }}</p>
 
-    <!-- Inventory Table (Grid Layout) -->
-    <div class="grid grid-cols-2 gap-6">
+    <!-- Inventory Table (Responsive Grid) -->
+    <div class="grid md:grid-cols-2 sm:grid-cols-1 gap-6">
       <!-- Hard Items -->
       <div>
-        <h2 class="text-xl font-semibold mb-2">🎸 Hard Items</h2>
-        <div class="grid grid-cols-4 gap-4 text-ivory border-b pb-2 font-bold">
+        <h2 class="text-xl font-semibold mb-4 text-center">🎸 Hard Items</h2>
+        <div
+          class="grid grid-cols-4 md:grid-cols-4 sm:grid-cols-2 gap-4 text-ivory border-b pb-2 font-bold text-center"
+        >
           <span>Item</span>
           <span>Stock</span>
           <span>Price</span>
-          <span>Sold</span>
+          <span class="text-center">Sold</span>
         </div>
 
         <div
           v-for="item in hardItems"
           :key="item.id"
-          class="grid grid-cols-4 gap-4 border-b py-2 items-center"
+          class="grid grid-cols-4 md:grid-cols-4 sm:grid-cols-2 gap-4 border-b py-2 items-center text-center"
         >
-          <span>{{ item.name }}</span>
-          <span>{{ item.quantity }}</span>
-          <span>${{ formattedPrice(item.price) }}</span>
-          <input
-            type="number"
-            class="border rounded p-1 w-16"
-            v-model.number="sales[item.id]"
-            min="0"
-          />
+          <span class="text-center">{{ item.name }}</span>
+          <span class="text-center">{{ item.quantity }}</span>
+          <span class="text-center">${{ formattedPrice(item.price) }}</span>
+          <div class="flex justify-center">
+            <input
+              type="number"
+              class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px]"
+              v-model.number="sales[item.id]"
+              min="0"
+              placeholder="Qty"
+            />
+          </div>
         </div>
       </div>
 
       <!-- Soft Items -->
       <div>
-        <h2 class="text-xl font-semibold mb-2">👕 Soft Items</h2>
-        <div class="grid grid-cols-5 gap-4 text-ivory border-b pb-2 font-bold">
+        <h2 class="text-xl font-semibold mb-4 text-center">👕 Soft Items</h2>
+
+        <!-- Table Header -->
+        <div class="grid grid-cols-3 gap-4 text-ivory border-b pb-2 font-bold text-center">
           <span>Item</span>
-          <span>Size</span>
-          <span>Stock</span>
-          <span>Price</span>
+          <span>Sizes (Stock)</span>
           <span>Sold</span>
         </div>
-
         <div
-          v-for="item in softItems"
-          :key="`${item.name}-${item.size}`"
-          class="grid grid-cols-5 gap-4 border-b py-2 items-center"
+          v-for="(sizes, itemName) in groupedSoftItems"
+          :key="itemName"
+          class="grid grid-cols-3 gap-4 border-b py-2 items-start"
         >
-          <span>{{ item.name }}</span>
-          <span>{{ item.size }}</span>
-          <span>{{ item.quantity }}</span>
-          <span>${{ formattedPrice(item.price) }}</span>
-          <input
-            type="number"
-            class="border rounded p-1 w-16"
-            v-model.number="sales[item.id]"
-            min="0"
-          />
+          <div class="font-semibold text-lg self-start text-center">{{ itemName }}</div>
+
+          <!-- Sizes Column -->
+          <div class="flex flex-col gap-2 items-center self-start w-full">
+            <span
+              v-for="size in sizes"
+              :key="size.id"
+              class="bg-gray-700 content-center text-white px-3 py-1 rounded text-center w-full text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px] lg:w-[50%]"
+            >
+              {{ size.size }} ({{ size.quantity }})
+            </span>
+          </div>
+
+          <!-- Sold Quantity Inputs -->
+          <div class="flex flex-col gap-2 items-center self-start w-full">
+            <input
+              v-for="size in sizes"
+              :key="size.id"
+              v-model.number="sales[size.id]"
+              type="number"
+              class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px]"
+              min="0"
+              placeholder="Qty"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -66,7 +85,7 @@
     <!-- Start Transaction Button -->
     <div class="text-center mt-6">
       <button
-        class="btn btn-primary px-6 py-2"
+        class="btn btn-primary px-6 py-2 w-full md:w-auto"
         :disabled="!Object.values(sales).some((qty) => qty > 0)"
         @click="openCart"
       >
@@ -79,7 +98,7 @@
       v-if="cartOpen"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
     >
-      <div class="bg-white p-6 rounded-lg shadow-lg max-w-lg">
+      <div class="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full sm:w-11/12">
         <h2 class="text-2xl font-semibold mb-4">🛒 Transaction Summary</h2>
 
         <div v-for="sale in filteredSales" :key="sale.id">
@@ -89,14 +108,8 @@
         <p class="font-bold mt-4">Subtotal: ${{ subtotal }}</p>
 
         <div class="flex gap-4 mt-4">
-          <label>
-            <input type="radio" v-model="paymentMethod" value="cash" />
-            Cash
-          </label>
-          <label>
-            <input type="radio" v-model="paymentMethod" value="card" />
-            Card
-          </label>
+          <label><input type="radio" v-model="paymentMethod" value="cash" /> Cash</label>
+          <label><input type="radio" v-model="paymentMethod" value="card" /> Card</label>
         </div>
 
         <div v-if="paymentMethod === 'card'" class="mt-4">
@@ -112,7 +125,7 @@
     </div>
 
     <!-- Sales Summary -->
-    <div class="mt-8 p-4 bg-gray-100 rounded-lg shadow-md">
+    <div class="mt-8 p-4 bg-gray-100 text-[#393f4d] rounded-lg shadow-md">
       <h2 class="text-xl font-semibold">📈 Sales Summary</h2>
       <p>Total Sales: ${{ salesStore.totalSales }}</p>
       <p>Cash Sales: ${{ salesStore.cashSales }}</p>
@@ -120,6 +133,7 @@
     </div>
   </div>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
@@ -142,6 +156,8 @@ const stripeTotal = ref(0);
 const cartOpen = ref(false);
 const showVenue = ref('');
 const showDate = ref('');
+
+const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 onMounted(async () => {
   if (!tourId) {
@@ -166,13 +182,15 @@ const filteredSales = computed(() => {
 const groupedSoftItems = computed(() => {
   const grouped = {};
 
-  inventory.value.forEach((item) => {
-    if (item.type === 'soft') {
-      if (!grouped[item.name]) {
-        grouped[item.name] = [];
-      }
-      grouped[item.name].push(item);
+  softItems.value.forEach((item) => {
+    if (!grouped[item.name]) {
+      grouped[item.name] = [];
     }
+    grouped[item.name].push(item);
+  });
+
+  Object.keys(grouped).forEach((key) => {
+    grouped[key].sort((a, b) => sizeOrder.indexOf(a.size) - sizeOrder.indexOf(b.size));
   });
 
   return grouped;

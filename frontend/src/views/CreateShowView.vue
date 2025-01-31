@@ -24,6 +24,12 @@
       </div>
 
       <button type="submit" class="btn btn-primary w-full">Create Show</button>
+      <button
+        @click.prevent="cancelSubmit"
+        class="btn btn-primary mt-4 w-full bg-red-500 text-white px-4 py-2 hover:bg-red-600 transition"
+      >
+        Cancel
+      </button>
     </form>
   </div>
 </template>
@@ -72,5 +78,9 @@ const submitShow = async () => {
   } catch (error) {
     console.error('Error creating show:', error.response?.data || error.message);
   }
+};
+
+const cancelSubmit = () => {
+  router.push(`/`);
 };
 </script>
