@@ -1,13 +1,21 @@
 <template>
   <div class="p-6">
     <!-- Dynamic tour name -->
-    <h1 class="text-3xl font-bold mb-6">Inventory for {{ tourName || 'Tour' }}</h1>
+    <h1 class="text-3xl font-bold my-6 text-center">Inventory for {{ tourName || 'Tour' }}</h1>
 
-    <!-- Add Inventory Button -->
-    <div class="flex justify-center mt-6 mb-4">
-      <router-link :to="`/inventory/add?tour_id=${route.params.id}`" class="btn btn-primary">
-        ➕ Add Inventory
-      </router-link>
+    <div class="flex gap-4 mb-4 justify-center">
+      <!-- Back to Home Page Button -->
+      <div class="flex justify-center mt-6 mb-4">
+        <router-link to="/" class="btn btn-primary">
+          ← Back to Home Page
+        </router-link>
+      </div>
+      <!-- Add Inventory Button -->
+      <div class="flex justify-center mt-6 mb-4">
+        <router-link :to="`/inventory/add?tour_id=${route.params.id}`" class="btn btn-primary">
+          ➕ Add Inventory Item
+        </router-link>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

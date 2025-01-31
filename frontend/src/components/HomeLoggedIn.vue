@@ -11,7 +11,7 @@
         <div
           v-for="tour in tours"
           :key="tour.id"
-          class="p-4 bg-white rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce"
+          class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce"
         >
           <div>
             <h2 class="text-xl font-semibold text-center md:text-left text-[#393f4d]">

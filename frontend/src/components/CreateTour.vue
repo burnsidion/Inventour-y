@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100">
+  <div class="min-h-screen flex items-center justify-center bg-primary">
     <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
       <h1 class="text-2xl font-bold mb-4 text-[#393f4d]">Create a New Tour</h1>
 
@@ -71,6 +71,12 @@
         <!-- Error Message -->
         <p v-if="errorMessage" class="text-red-500 text-sm mt-2">{{ errorMessage }}</p>
       </form>
+      <button
+        @click="cancelSubmit"
+        class="btn btn-primary mt-4 w-full bg-red-500 text-white px-4 py-2 hover:bg-red-600 transition"
+      >
+        Cancel
+      </button>
     </div>
   </div>
 </template>
@@ -119,5 +125,9 @@ const createTour = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const cancelSubmit = () => {
+  router.push(`/`);
 };
 </script>
