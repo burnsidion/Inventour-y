@@ -59,6 +59,7 @@
             {{ softExpanded ? 'Collapse' : 'Expand' }}
           </button>
         </div>
+
         <div v-if="Object.keys(softItemsGrouped).length > 0" class="grid gap-4 text-[#393f4d]">
           <Transition name="fade">
             <div v-if="softExpanded" class="grid gap-4">
@@ -74,20 +75,28 @@
                     <tr class="border-b">
                       <th class="text-left p-2">Size</th>
                       <th class="text-left p-2">Quantity</th>
+                      <th class="text-left p-2">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(quantity, size) in sizes" :key="size" class="border-b">
+                    <tr
+                      v-for="(quantity, size) in sizes"
+                      :key="size"
+                      class="border-b hover:bg-gray-100 transition duration-200"
+                    >
                       <td class="p-2">{{ size }}</td>
-                      <td class="p-2">{{ quantity }}</td>
+                      <td class="p-2">{{ quantity.quantity }}</td>
+                      <td class="p-2 text-right">
+                        <button
+                          @click="deleteItemBySize(name, size)"
+                          class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200"
+                        >
+                          🗑 Delete
+                        </button>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
-                <div class="flex justify-center">
-                  <button @click="deleteItem(item.id)" class="btn btn-error text-white mt-2">
-                    🗑 Delete Item
-                  </button>
-                </div>
               </div>
             </div>
           </Transition>
@@ -164,6 +173,17 @@ const deleteItem = async (itemId) => {
   }
 };
 
+const deleteItemBySize = (name, size) => {
+  const itemToDelete = inventory.value.find((item) => item.name === name && item.size === size);
+
+  if (!itemToDelete) {
+    console.error('Item not found.');
+    return;
+  }
+
+  deleteItem(itemToDelete.id);
+};
+
 const hardItems = computed(() => {
   return inventory.value.filter((item) => item.type === 'hard');
 });
@@ -176,7 +196,10 @@ const softItemsGrouped = computed(() => {
       if (!grouped[item.name]) {
         grouped[item.name] = {};
       }
-      grouped[item.name][item.size || 'One Size'] = item.quantity;
+      grouped[item.name][item.size || 'One Size'] = {
+        quantity: item.quantity,
+        id: item.id,
+      };
     }
   });
   return grouped;
