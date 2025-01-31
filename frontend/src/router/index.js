@@ -40,6 +40,7 @@ const router = createRouter({
       path: '/shows/:id',
       name: 'ShowDetails',
       component: ShowView,
+      props: true,
     },
     {
       path: '/tours/:id/inventory',
