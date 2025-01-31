@@ -25,10 +25,16 @@
           <!-- Shows List -->
           <div v-if="tour.shows && tour.shows.length > 0" class="mt-4">
             <h3 class="text-[#393f4d] font-semibold text-center md:text-left">Shows:</h3>
-            <div v-for="show in tour.shows" :key="show.id" class="text-center md:text-left">
+            <div v-for="show in tour.shows" :key="show.id" class="text-center md:text-left flex">
               <router-link :to="`/shows/${show.id}`" class="text-blue-500 hover:underline block">
                 📍 {{ show.venue }} - {{ formatTourDate(show.date) }}
               </router-link>
+              <button
+                @click="deleteShow(tour.id, show.id)"
+                class="text-red-500 hover:text-red-700 ml-4"
+              >
+                🗑 Delete
+              </button>
             </div>
           </div>
           <p v-else class="text-gray-500 text-center md:text-left">No shows added yet.</p>
@@ -36,7 +42,7 @@
           <!-- Buttons -->
           <div class="flex flex-col md:flex-row gap-2 mt-4">
             <button @click="createShow(tour.id)" class="btn btn-primary flex-1">
-              ➕ Create Show
+              ➕ Add Show
             </button>
             <router-link :to="`/tours/${tour.id}/inventory`" class="btn btn-secondary flex-1">
               📦 View Inventory
@@ -129,6 +135,28 @@ const deleteTour = async (tourId) => {
     tours.value = tours.value.filter((tour) => tour.id !== tourId);
   } catch (error) {
     console.error('Error deleting tour:', error.response?.data || error.message);
+  }
+};
+
+const deleteShow = async (tourId, showId) => {
+  if (!confirm('Are you sure you want to delete this show?')) return;
+
+  try {
+    const token = authStore.token;
+    await axios.delete(`http://localhost:5002/api/shows/${showId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const tourIndex = tours.value.findIndex((tour) => tour.id === tourId);
+    if (tourIndex !== -1) {
+      tours.value[tourIndex].shows = tours.value[tourIndex].shows.filter(
+        (show) => show.id !== showId
+      );
+    }
+
+    console.log('Show deleted successfully.');
+  } catch (error) {
+    console.error('Error deleting show:', error.response?.data || error.message);
   }
 };
 

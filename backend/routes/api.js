@@ -269,6 +269,33 @@ router.get("/shows/:id", authenticateToken, async (req, res) => {
   }
 });
 
+router.delete("/shows/:id", authenticateToken, async (req, res) => {
+  const showId = req.params.id;
+  const userId = req.user.id; // Get user ID from token
+
+  try {
+    // Check if the show exists and belongs to a tour owned by this user
+    const showCheck = await pool.query(
+      `SELECT shows.id FROM shows
+       JOIN tours ON shows.tour_id = tours.id
+       WHERE shows.id = $1 AND tours.user_id = $2`,
+      [showId, userId]
+    );
+
+    if (showCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Show not found or unauthorized to delete." });
+    }
+
+    // Delete the show
+    await pool.query("DELETE FROM shows WHERE id = $1", [showId]);
+
+    res.status(200).json({ message: "Show deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting show:", error);
+    res.status(500).json({ error: "Failed to delete show." });
+  }
+});
+
 //Inventory routes
 router.post("/inventory", authenticateToken, async (req, res) => {
   const { tour_id, name, type, sizes, quantity, price, image_url } = req.body;
