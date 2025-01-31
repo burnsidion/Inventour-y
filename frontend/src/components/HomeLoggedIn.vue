@@ -26,7 +26,10 @@
           <div v-if="tour.shows && tour.shows.length > 0" class="mt-4">
             <h3 class="text-[#393f4d] font-semibold text-center md:text-left">Shows:</h3>
             <div v-for="show in tour.shows" :key="show.id" class="text-center md:text-left flex">
-              <router-link :to="`/shows/${show.id}`" class="text-blue-500 hover:underline block">
+              <router-link
+                :to="`/shows/${show.id}?tour_id=${tour.id}`"
+                class="text-blue-500 hover:underline block"
+              >
                 📍 {{ show.venue }} - {{ formatTourDate(show.date) }}
               </router-link>
               <button
@@ -41,9 +44,7 @@
 
           <!-- Buttons -->
           <div class="flex flex-col md:flex-row gap-2 mt-4">
-            <button @click="createShow(tour.id)" class="btn btn-primary flex-1">
-              ➕ Add Show
-            </button>
+            <button @click="createShow(tour.id)" class="btn btn-primary flex-1">➕ Add Show</button>
             <router-link :to="`/tours/${tour.id}/inventory`" class="btn btn-secondary flex-1">
               📦 View Inventory
             </router-link>
