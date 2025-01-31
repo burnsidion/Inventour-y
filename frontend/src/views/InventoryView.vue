@@ -1,6 +1,12 @@
 <template>
   <div class="p-6">
     <h1 class="text-3xl font-bold mb-6">Inventory for Tour</h1>
+    <!-- Add Inventory Button -->
+    <div class="flex justify-center mt-6 mb-4">
+      <router-link :to="`/inventory/add?tour_id=${route.params.id}`" class="btn btn-primary">
+        ➕ Add Inventory
+      </router-link>
+    </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- Hard Items -->
@@ -103,13 +109,6 @@
         </div>
         <p v-else class="text-gray-500">No soft items in inventory.</p>
       </div>
-    </div>
-
-    <!-- Add Inventory Button -->
-    <div class="flex justify-center mt-6">
-      <router-link :to="`/inventory/add?tour_id=${route.params.id}`" class="btn btn-primary">
-        ➕ Add Inventory
-      </router-link>
     </div>
   </div>
 </template>

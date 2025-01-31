@@ -12,16 +12,29 @@
         <option value="soft">Soft Item (T-Shirts, Hoodies)</option>
       </select>
 
-      <label class="block mt-4 mb-2">Size (if applicable)</label>
-      <input
-        v-model="size"
-        type="text"
-        class="input input-bordered w-full"
-        placeholder="Leave blank if not applicable"
-      />
+      <div v-if="type === 'soft'">
+        <label class="block mt-4 mb-2">Select Sizes & Quantities</label>
+        <div class="grid grid-cols-2 gap-4">
+          <div v-for="size in availableSizes" :key="size" class="flex items-center">
+            <input type="checkbox" :id="size" v-model="sizesSelected[size]" class="mr-2" />
+            <label :for="size" class="font-medium">{{ size }}</label>
 
-      <label class="block mt-4 mb-2">Quantity</label>
-      <input v-model="quantity" type="number" class="input input-bordered w-full" required />
+            <input
+              v-if="sizesSelected[size]"
+              type="number"
+              v-model.number="sizes[size]"
+              class="ml-4 border rounded p-1 w-16"
+              placeholder="Qty"
+              min="1"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div v-if="type === 'hard'">
+        <label class="block mt-4 mb-2">Quantity</label>
+        <input v-model="quantity" type="number" class="input input-bordered w-full" required />
+      </div>
 
       <label class="block mt-4 mb-2">Price ($)</label>
       <input
@@ -34,6 +47,7 @@
 
       <button type="submit" class="btn btn-primary mt-4 w-full">➕ Add Inventory Item</button>
     </form>
+
     <button
       @click="cancelSubmit"
       class="btn btn-primary mt-4 w-full bg-red-500 text-white px-4 py-2 hover:bg-red-600 transition"
@@ -42,9 +56,9 @@
     </button>
   </div>
 </template>
-  
-  <script setup>
-import { ref } from 'vue';
+
+<script setup>
+import { ref, reactive } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
@@ -55,37 +69,44 @@ const router = useRouter();
 
 const name = ref('');
 const type = ref('hard');
-const size = ref('');
 const quantity = ref(0);
 const price = ref(0);
 
+const availableSizes = ref(['S', 'M', 'L', 'XL', 'XXL']);
+const sizesSelected = reactive({});
+const sizes = reactive({});
+
+const updateSizes = () => {
+  for (const size in sizes) {
+    if (!sizesSelected[size]) {
+      delete sizes[size];
+    }
+  }
+};
+
 const submitInventory = async () => {
-  console.log('Submitting Inventory:', {
+  updateSizes();
+
+  const payload = {
     tour_id: route.query.tour_id,
     name: name.value,
     type: type.value,
-    size: size.value || null,
-    quantity: quantity.value,
+    sizes: type.value === 'soft' ? sizes : null,
+    quantity: type.value === 'hard' ? quantity.value : null,
     price: price.value,
-  });
+  };
+
+  console.log('Submitting Inventory:', payload);
 
   try {
     const token = authStore.token;
-    await axios.post(
-      'http://localhost:5002/api/inventory',
-      {
-        tour_id: route.query.tour_id,
-        name: name.value,
-        type: type.value,
-        size: size.value || null,
-        quantity: quantity.value,
-        price: price.value,
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    await axios.post('http://localhost:5002/api/inventory', payload, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
     router.push(`/tours/${route.query.tour_id}/inventory`);
   } catch (error) {
-    console.error('Error adding inventory:', error);
+    console.error('Error adding inventory:', error.response?.data || error);
   }
 };
 

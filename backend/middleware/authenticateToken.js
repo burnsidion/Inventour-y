@@ -13,7 +13,14 @@ export const authenticateToken = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    console.error("Invalid token:", error);
+    console.error("Token verification failed:", error);
+
+    if (error.name === "TokenExpiredError") {
+      return res
+        .status(401)
+        .json({ error: "Session expired. Please log in again." });
+    }
+
     res.status(403).json({ error: "Invalid token." });
   }
 };
