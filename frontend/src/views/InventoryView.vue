@@ -105,7 +105,11 @@
                         class="p-2 text-center"
                         :class="quantity.quantity < 30 ? 'text-red-600' : ''"
                       >
-                        {{ quantity.quantity < 30 ? `${quantity.quantity} LOW STOCK!!!`: quantity.quantity }}
+                        {{
+                          quantity.quantity < 30
+                            ? `${quantity.quantity} LOW STOCK!!!`
+                            : quantity.quantity
+                        }}
                       </td>
                       <td class="p-2 text-right">
                         <button
