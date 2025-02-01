@@ -6,9 +6,7 @@
     <div class="flex gap-4 mb-4 justify-center">
       <!-- Back to Home Page Button -->
       <div class="flex justify-center mt-6 mb-4">
-        <router-link to="/" class="btn btn-primary">
-          ← Back to Home Page
-        </router-link>
+        <router-link to="/" class="btn btn-primary"> ← Back to Home Page </router-link>
       </div>
       <!-- Add Inventory Button -->
       <div class="flex justify-center mt-6 mb-4">
@@ -43,13 +41,15 @@
                   <thead>
                     <tr class="border-b">
                       <th class="text-left p-2">Quantity</th>
-                      <th class="text-left p-2">Price</th>
+                      <th class="text-right p-2">Price</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr class="border-b">
-                      <td class="p-2">{{ item.quantity }}</td>
-                      <td class="p-2">${{ formattedPrice(item.price) }}</td>
+                      <td class="p-2" :class="item.quantity < 30 ? 'text-red-600' : ''">
+                        {{ item.quantity < 30 ? `${item.quantity} LOW STOCK!!` : item.quantity }}
+                      </td>
+                      <td class="p-2 text-right">${{ formattedPrice(item.price) }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -90,8 +90,8 @@
                   <thead>
                     <tr class="border-b">
                       <th class="text-left p-2">Size</th>
-                      <th class="text-left p-2">Quantity</th>
-                      <th class="text-left p-2">Actions</th>
+                      <th class="p-2">Quantity</th>
+                      <th class="text-end pr-7">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -101,7 +101,12 @@
                       class="border-b hover:bg-gray-100 transition duration-200"
                     >
                       <td class="p-2">{{ size }}</td>
-                      <td class="p-2">{{ quantity.quantity }}</td>
+                      <td
+                        class="p-2 text-center"
+                        :class="quantity.quantity < 30 ? 'text-red-600' : ''"
+                      >
+                        {{ quantity.quantity < 30 ? `${quantity.quantity} LOW STOCK!!!`: quantity.quantity }}
+                      </td>
                       <td class="p-2 text-right">
                         <button
                           @click="deleteItemBySize(name, size)"

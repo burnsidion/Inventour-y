@@ -4,7 +4,7 @@
     <SidebarMenu class="w-64 hidden md:block" />
 
     <div class="flex-1 p-4 md:p-6">
-      <h1 class="text-3xl font-bold mb-6 text-center md:text-left">Your Tours</h1>
+      <h1 class="text-3xl font-bold mb-6 text-center">Your Tours</h1>
 
       <!-- Tours List -->
       <div v-if="tours.length > 0" class="flex flex-col gap-4">

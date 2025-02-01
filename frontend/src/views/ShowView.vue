@@ -4,81 +4,107 @@
     <h1 class="text-3xl font-bold mb-4 text-center">📊 Sales Tracker for {{ showVenue }}</h1>
     <p class="text-ivory-600 mb-6 text-center">{{ formatShowDate(showDate) }}</p>
 
+    <!-- Back to Home Page Button -->
+    <div class="flex justify-center mt-6 mb-4">
+      <router-link to="/" class="btn btn-primary"> ← Back to Home Page </router-link>
+    </div>
+
     <!-- Inventory Table (Responsive Grid) -->
     <div class="grid md:grid-cols-2 sm:grid-cols-1 gap-6">
       <!-- Hard Items -->
       <div>
-        <h2 class="text-xl font-semibold mb-4 text-center">🎸 Hard Items</h2>
-        <div
-          class="grid grid-cols-4 md:grid-cols-4 sm:grid-cols-2 gap-4 text-ivory border-b pb-2 font-bold text-center"
-        >
-          <span>Item</span>
-          <span>Stock</span>
-          <span>Price</span>
-          <span class="text-center">Sold</span>
+        <div class="flex flex-col mb-2">
+          <h2 class="text-xl font-semibold mb-4 text-center">🎸 Hard Items</h2>
+          <button @click="hardExpanded = !hardExpanded" class="text-sm text-blue-500 mb-2">
+            {{ hardExpanded ? 'Collapse' : 'Expand' }}
+          </button>
         </div>
+        <Transition name="fade">
+          <div v-if="hardExpanded">
+            <div
+              class="grid grid-cols-4 md:grid-cols-4 sm:grid-cols-2 gap-4 text-ivory border-b pb-2 font-bold text-center"
+            >
+              <span>Item</span>
+              <span>Stock</span>
+              <span>Price</span>
+              <span class="text-center">Sold</span>
+            </div>
 
-        <div
-          v-for="item in hardItems"
-          :key="item.id"
-          class="grid grid-cols-4 md:grid-cols-4 sm:grid-cols-2 gap-4 border-b py-2 items-center text-center"
-        >
-          <span class="text-center">{{ item.name }}</span>
-          <span class="text-center">{{ item.quantity }}</span>
-          <span class="text-center">${{ formattedPrice(item.price) }}</span>
-          <div class="flex justify-center">
-            <input
-              type="number"
-              class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px]"
-              v-model.number="sales[item.id]"
-              min="0"
-              placeholder="Qty"
-            />
+            <div
+              v-for="item in hardItems"
+              :key="item.id"
+              class="grid grid-cols-4 md:grid-cols-4 sm:grid-cols-2 gap-4 border-b py-2 items-center text-center"
+            >
+              <span class="text-center">{{ item.name }}</span>
+              <span class="text-center" :class="item.quantity < 30 ? 'text-red-600' : ''">{{
+                item.quantity
+              }}</span>
+              <span class="text-center">${{ formattedPrice(item.price) }}</span>
+              <div class="flex justify-center">
+                <input
+                  type="number"
+                  class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px]"
+                  v-model.number="sales[item.id]"
+                  min="0"
+                  placeholder="Qty"
+                />
+              </div>
+            </div>
           </div>
-        </div>
+        </Transition>
       </div>
 
       <!-- Soft Items -->
       <div>
-        <h2 class="text-xl font-semibold mb-4 text-center">👕 Soft Items</h2>
+        <div class="flex flex-col mb-2">
+          <h2 class="text-xl font-semibold mb-4 text-center">👕 Soft Items</h2>
+          <button @click="softExpanded = !softExpanded" class="text-sm text-blue-500 mb-2">
+            {{ softExpanded ? 'Collapse' : 'Expand' }}
+          </button>
+        </div>
 
         <!-- Table Header -->
-        <div class="grid grid-cols-3 gap-4 text-ivory border-b pb-2 font-bold text-center">
-          <span>Item</span>
-          <span>Sizes (Stock)</span>
-          <span>Sold</span>
-        </div>
-        <div
-          v-for="(sizes, itemName) in groupedSoftItems"
-          :key="itemName"
-          class="grid grid-cols-3 gap-4 border-b py-2 items-start"
-        >
-          <div class="font-semibold text-lg self-start text-center">{{ itemName }}</div>
-
-          <!-- Sizes Column -->
-          <div class="flex flex-col gap-2 items-center self-start w-full">
-            <span
-              v-for="size in sizes"
-              :key="size.id"
-              class="bg-gray-700 content-center text-white px-3 py-1 rounded text-center w-full text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px] lg:w-[50%]"
+        <Transition name="fade">
+          <div v-if="softExpanded">
+            <div class="grid grid-cols-3 gap-4 text-ivory border-b pb-2 font-bold text-center">
+              <span>Item</span>
+              <span>Sizes (Stock)</span>
+              <span>Sold</span>
+            </div>
+            <div
+              v-for="(sizes, itemName) in groupedSoftItems"
+              :key="itemName"
+              class="grid grid-cols-3 gap-4 border-b py-2 items-start"
             >
-              {{ size.size }} ({{ size.quantity }})
-            </span>
+              <div class="font-semibold text-lg self-start text-center">{{ itemName }}</div>
+              <!-- Sizes Column -->
+              <div class="flex flex-col gap-2 items-center self-start w-full">
+                <span
+                  v-for="size in sizes"
+                  :key="size.id"
+                  :class="[
+                    'bg-gray-700 content-center px-3 py-1 rounded text-center w-full text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px] lg:w-[50%]',
+                    size.quantity < 30 ? 'text-red-600' : 'text-white',
+                  ]"
+                >
+                  {{ size.size }} ({{ size.quantity }})
+                </span>
+              </div>
+              <!-- Sold Quantity Inputs -->
+              <div class="flex flex-col gap-2 items-center self-start w-full">
+                <input
+                  v-for="size in sizes"
+                  :key="size.id"
+                  v-model.number="sales[size.id]"
+                  type="number"
+                  class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px]"
+                  min="0"
+                  placeholder="Qty"
+                />
+              </div>
+            </div>
           </div>
-
-          <!-- Sold Quantity Inputs -->
-          <div class="flex flex-col gap-2 items-center self-start w-full">
-            <input
-              v-for="size in sizes"
-              :key="size.id"
-              v-model.number="sales[size.id]"
-              type="number"
-              class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px]"
-              min="0"
-              placeholder="Qty"
-            />
-          </div>
-        </div>
+        </Transition>
       </div>
     </div>
 
@@ -156,6 +182,8 @@ const stripeTotal = ref(0);
 const cartOpen = ref(false);
 const showVenue = ref('');
 const showDate = ref('');
+const softExpanded = ref(true);
+const hardExpanded = ref(true);
 
 const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
