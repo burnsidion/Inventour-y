@@ -30,27 +30,17 @@ export const useSalesStore = defineStore('sales', () => {
   };
 
   const calculateTotals = () => {
-    if (!sales.value || !Array.isArray(sales.value)) {
-      console.warn('⚠️ Sales data is empty or invalid.');
-      sales.value = [];
-    }
-
-    let total = 0;
-    let cash = 0;
-    let card = 0;
-
-    sales.value.forEach((sale) => {
-      total += sale.total_amount;
-      if (sale.payment_method === 'cash') {
-        cash += sale.total_amount;
-      } else if (sale.payment_method === 'card') {
-        card += sale.total_amount;
-      }
-    });
-
-    totalSales.value = total;
-    cashSales.value = cash;
-    cardSales.value = card;
+    totalSales.value = sales.value
+      .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0)
+      .toFixed(2);
+    cashSales.value = sales.value
+      .filter((sale) => sale.payment_method === 'cash')
+      .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0)
+      .toFixed(2);
+    cardSales.value = sales.value
+      .filter((sale) => sale.payment_method === 'card')
+      .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0)
+      .toFixed(2);
   };
 
   const addSale = async (inventory_id, quantity_sold, total_amount, payment_method) => {

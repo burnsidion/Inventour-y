@@ -3,17 +3,14 @@
     <!-- Dynamic tour name -->
     <h1 class="text-3xl font-bold my-6 text-center">Inventory for {{ tourName || 'Tour' }}</h1>
 
-    <div class="flex gap-4 mb-4 justify-center">
+    <div class="flex flex-col sm:flex-row gap-4 mb-4 justify-center sm:justify-center">
       <!-- Back to Home Page Button -->
-      <div class="flex justify-center mt-6 mb-4">
-        <router-link to="/" class="btn btn-primary"> ← Back to Home Page </router-link>
-      </div>
+      <router-link to="/" class="btn btn-primary"> ← Back to Home Page </router-link>
+
       <!-- Add Inventory Button -->
-      <div class="flex justify-center mt-6 mb-4">
-        <router-link :to="`/inventory/add?tour_id=${route.params.id}`" class="btn btn-primary">
-          ➕ Add Inventory Item
-        </router-link>
-      </div>
+      <router-link :to="`/inventory/add?tour_id=${route.params.id}`" class="btn btn-primary">
+        ➕ Add Inventory Item
+      </router-link>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -30,7 +27,7 @@
 
         <div v-if="hardItems.length > 0" class="grid gap-4 text-[#393f4d]">
           <Transition name="fade">
-            <div v-if="hardExpanded" class="grid gap-4">
+            <div v-if="hardExpanded" class="grid gap-4 overflow-y-auto max-h-[900px]">
               <div
                 v-for="item in hardItems"
                 :key="item.id"
@@ -78,7 +75,7 @@
 
         <div v-if="Object.keys(softItemsGrouped).length > 0" class="grid gap-4 text-[#393f4d]">
           <Transition name="fade">
-            <div v-if="softExpanded" class="grid gap-4">
+            <div v-if="softExpanded" class="grid gap-4 overflow-y-auto max-h-[900px]">
               <div
                 v-for="(sizes, name) in softItemsGrouped"
                 :key="name"
