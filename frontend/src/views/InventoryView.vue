@@ -43,7 +43,10 @@
                   </thead>
                   <tbody>
                     <tr class="border-b">
-                      <td class="p-2" :class="item.quantity < 30 ? 'text-red-600' : ''">
+                      <td
+                        class="p-2"
+                        :class="item.quantity < 30 ? 'text-red-600 animate-pulse' : ''"
+                      >
                         {{ item.quantity < 30 ? `${item.quantity} LOW STOCK!!` : item.quantity }}
                       </td>
                       <td class="p-2 text-right">${{ formattedPrice(item.price) }}</td>
@@ -100,7 +103,7 @@
                       <td class="p-2">{{ sizeEntry.size }}</td>
                       <td
                         class="p-2 text-center"
-                        :class="sizeEntry.quantity < 30 ? 'text-red-600' : ''"
+                        :class="sizeEntry.quantity < 30 ? 'text-red-600 animate-pulse' : ''"
                       >
                         {{
                           sizeEntry.quantity < 30

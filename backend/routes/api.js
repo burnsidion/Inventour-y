@@ -283,7 +283,9 @@ router.delete("/shows/:id", authenticateToken, async (req, res) => {
     );
 
     if (showCheck.rows.length === 0) {
-      return res.status(404).json({ error: "Show not found or unauthorized to delete." });
+      return res
+        .status(404)
+        .json({ error: "Show not found or unauthorized to delete." });
     }
 
     // Delete the show
@@ -422,13 +424,19 @@ router.delete("/inventory/:id", authenticateToken, async (req, res) => {
 
 //Sales routes
 router.post("/sales", authenticateToken, async (req, res) => {
-  const { inventory_id, quantity_sold, total_amount, payment_method } =
+  const { inventory_id, show_id, quantity_sold, total_amount, payment_method } =
     req.body;
 
-  if (!inventory_id || !quantity_sold || !total_amount || !payment_method) {
+  if (
+    !inventory_id ||
+    !show_id ||
+    !quantity_sold ||
+    !total_amount ||
+    !payment_method
+  ) {
     return res.status(400).json({
       error:
-        "Missing required fields: inventory_id, quantity_sold, total_amount, payment_method",
+        "Missing required fields: inventory_id, show_id, quantity_sold, total_amount, payment_method",
     });
   }
 
@@ -446,11 +454,11 @@ router.post("/sales", authenticateToken, async (req, res) => {
     await pool.query("BEGIN");
 
     let adjustedPrice = total_amount;
-
     if (payment_method === "free") {
       adjustedPrice = 0;
     }
 
+    // Decrease inventory quantity
     const inventoryResult = await pool.query(
       `UPDATE inventory
        SET quantity = quantity - $1
@@ -466,11 +474,12 @@ router.post("/sales", authenticateToken, async (req, res) => {
         .json({ error: "Insufficient inventory or invalid inventory ID" });
     }
 
+    // Insert sale into the database, including `show_id`
     const salesResult = await pool.query(
-      `INSERT INTO sales (inventory_id, quantity_sold, total_amount, payment_method)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO sales (inventory_id, show_id, quantity_sold, total_amount, payment_method)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [inventory_id, quantity_sold, adjustedPrice, payment_method]
+      [inventory_id, show_id, quantity_sold, adjustedPrice, payment_method]
     );
 
     await pool.query("COMMIT");
@@ -487,12 +496,12 @@ router.post("/sales", authenticateToken, async (req, res) => {
 });
 
 router.get("/sales", authenticateToken, async (req, res) => {
-  const { tour_id } = req.query;
+  const { show_id } = req.query;
 
-  if (!tour_id) {
+  if (!show_id) {
     return res
       .status(400)
-      .json({ error: "Missing required query parameter: tour_id" });
+      .json({ error: "Missing required query parameter: show_id" });
   }
 
   try {
@@ -501,14 +510,10 @@ router.get("/sales", authenticateToken, async (req, res) => {
               inventory.name AS item_name, inventory.type, inventory.size, inventory.price
        FROM sales
        JOIN inventory ON sales.inventory_id = inventory.id
-       WHERE inventory.tour_id = $1
+       WHERE sales.show_id = $1
        ORDER BY sales.created_at DESC`,
-      [tour_id]
+      [show_id]
     );
-
-    if (result.rows.length === 0) {
-      return res.status(200).json([]);
-    }
 
     res.status(200).json(result.rows);
   } catch (error) {

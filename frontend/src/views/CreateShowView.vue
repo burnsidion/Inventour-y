@@ -54,14 +54,14 @@ onMounted(() => {
   tourId.value = route.query.tour_id;
   if (!tourId.value) {
     console.error('No tour ID provided');
-    router.push('/'); // Redirect if no tour_id is present
+    router.push('/');
   }
 });
 
 const submitShow = async () => {
   try {
     const token = authStore.token;
-    await axios.post(
+    const request = await axios.post(
       'http://localhost:5002/api/shows',
       {
         tour_id: tourId.value,
@@ -72,9 +72,8 @@ const submitShow = async () => {
       },
       { headers: { Authorization: `Bearer ${token}` } }
     );
-
-    // Redirect to the tour's page after creating the show
-    router.push('/');
+    const id = request.data.show.id;
+    router.push(`/shows/${id}/?tour_id=${tourId.value}`);
   } catch (error) {
     console.error('Error creating show:', error.response?.data || error.message);
   }
