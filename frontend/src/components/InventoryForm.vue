@@ -89,7 +89,7 @@ const submitInventory = async () => {
 
   const payload = {
     tour_id: route.query.tour_id,
-    name: name.value,
+    name: name.value.trim(),
     type: type.value,
     sizes: type.value === 'soft' ? sizes : null,
     quantity: type.value === 'hard' ? quantity.value : null,
@@ -100,6 +100,30 @@ const submitInventory = async () => {
 
   try {
     const token = authStore.token;
+
+    // Fetch existing inventory
+    const existingInventoryResponse = await axios.get(
+      `http://localhost:5002/api/inventory?tour_id=${route.query.tour_id}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    console.log('Fetched Inventory Data:', existingInventoryResponse.data); // LOG FULL RESPONSE
+
+    // Check for a duplicate (name + type match)
+    const duplicateItem = existingInventoryResponse.data.find(
+      (item) =>
+        item.name.toLowerCase().trim() === payload.name.toLowerCase().trim() &&
+        item.type === payload.type
+    );
+
+    if (duplicateItem) {
+      alert(
+        `An item with name "${payload.name}" already exists in inventory. Please edit the name so that this is recorded as a new item. To edit already existing iventory, press the 'edit' button on the inventory card.`
+      );
+      return; // 🚨 PREVENT API CALL
+    }
+
+    // Proceed to create a new inventory item if no duplicate is found
     await axios.post('http://localhost:5002/api/inventory', payload, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -109,7 +133,6 @@ const submitInventory = async () => {
     console.error('Error adding inventory:', error.response?.data || error);
   }
 };
-
 const cancelSubmit = () => {
   router.push(`/tours/${route.query.tour_id}/inventory`);
 };
