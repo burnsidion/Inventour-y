@@ -310,6 +310,27 @@ router.post("/inventory", authenticateToken, async (req, res) => {
   }
 
   try {
+    // Check for existing items with the same name and type
+    let existingItem;
+    if (type === "soft") {
+      existingItem = await pool.query(
+        "SELECT * FROM inventory WHERE tour_id = $1 AND name = $2 AND type = $3",
+        [tour_id, name, type]
+      );
+    } else {
+      existingItem = await pool.query(
+        "SELECT * FROM inventory WHERE tour_id = $1 AND name = $2 AND type = $3 AND size IS NULL",
+        [tour_id, name, type]
+      );
+    }
+
+    if (existingItem.rows.length > 0) {
+      return res
+        .status(400)
+        .json({ error: "Item with this name already exists in inventory" });
+    }
+
+    // Handle Soft Items
     if (type === "soft" && sizes && Object.keys(sizes).length > 0) {
       const inventoryItems = [];
 
@@ -327,10 +348,11 @@ router.post("/inventory", authenticateToken, async (req, res) => {
         .json({ message: "Soft inventory items added", items: inventoryItems });
     }
 
+    // Handle Hard Items
     const result = await pool.query(
       `INSERT INTO inventory (tour_id, name, type, size, quantity, price, image_url) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [tour_id, name, type, null, quantity, price, image_url || null]
+       VALUES ($1, $2, $3, NULL, $4, $5, $6) RETURNING *`,
+      [tour_id, name, type, quantity, price, image_url || null]
     );
 
     res
