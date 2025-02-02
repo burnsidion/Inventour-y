@@ -4,9 +4,28 @@
     <h1 class="text-3xl font-bold mb-4 text-center">📊 Sales Tracker for {{ showVenue }}</h1>
     <p class="text-ivory-600 mb-6 text-center">{{ formatShowDate(showDate) }}</p>
 
-    <!-- Back to Home Page Button -->
-    <div class="flex justify-center mt-6 mb-4">
-      <router-link to="/" class="btn btn-primary"> ← Back to Home Page </router-link>
+    <div class="flex flex-col sm:flex-row gap-4 mb-4 justify-center sm:justify-center">
+      <!-- Back to Home Page Button -->
+      <div class="flex justify-center">
+        <router-link to="/" class="btn btn-primary"> ← Back to Home Page </router-link>
+      </div>
+      <!-- Start Transaction Button -->
+      <div class="text-center mb-6">
+        <button
+          class="btn btn-primary px-6 py-2"
+          :disabled="!Object.values(sales).some((qty) => qty > 0)"
+          @click="openCart"
+        >
+          🛒 Start Transaction
+        </button>
+      </div>
+      <div>
+        <button 
+          @click="clearAll()"
+          class="btn btn-primary">
+          Clear All Quantities
+        </button>
+      </div>
     </div>
 
     <!-- Inventory Table (Responsive Grid) -->
@@ -65,7 +84,7 @@
 
         <!-- Table Header -->
         <Transition name="fade">
-          <div v-if="softExpanded">
+          <div v-if="softExpanded" class="overflow-y-auto max-h-[800px]">
             <div class="grid grid-cols-3 gap-4 text-ivory border-b pb-2 font-bold text-center">
               <span>Item</span>
               <span>Sizes (Stock)</span>
@@ -76,7 +95,9 @@
               :key="itemName"
               class="grid grid-cols-3 gap-4 border-b py-2 items-start"
             >
-              <div class="font-semibold text-lg self-start text-center">{{ itemName }}</div>
+              <div class="font-semibold text-lg self-start text-center">
+                {{ itemName }} ${{ sizes.length > 0 ? sizes[0].price : 'N/A' }}
+              </div>
               <!-- Sizes Column -->
               <div class="flex flex-col gap-2 items-center self-start w-full">
                 <span
@@ -108,55 +129,35 @@
       </div>
     </div>
 
-    <!-- Start Transaction Button -->
-    <div class="text-center mt-6">
-      <button
-        class="btn btn-primary px-6 py-2 w-full md:w-auto"
-        :disabled="!Object.values(sales).some((qty) => qty > 0)"
-        @click="openCart"
-      >
-        🛒 Start Transaction
-      </button>
+    <div v-if="successMessage" class="text-center text-green-500 font-semibold mt-4">
+      {{ successMessage }}
     </div>
 
     <!-- Transaction Modal -->
-    <div
-      v-if="cartOpen"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
-    >
-      <div class="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full sm:w-11/12">
-        <h2 class="text-2xl font-semibold mb-4">🛒 Transaction Summary</h2>
-
-        <div v-for="sale in filteredSales" :key="sale.id">
-          <p>{{ getItemName(sale.id) }} x {{ sale.qty }} - ${{ getItemTotal(sale.id) }}</p>
-        </div>
-
-        <p class="font-bold mt-4">Subtotal: ${{ subtotal }}</p>
-
-        <div class="flex gap-4 mt-4">
-          <label><input type="radio" v-model="paymentMethod" value="cash" /> Cash</label>
-          <label><input type="radio" v-model="paymentMethod" value="card" /> Card</label>
-        </div>
-
-        <div v-if="paymentMethod === 'card'" class="mt-4">
-          <label>Stripe Total:</label>
-          <input type="number" class="border rounded p-1 w-full" v-model.number="stripeTotal" />
-        </div>
-
-        <div class="mt-6 flex justify-between">
-          <button class="btn btn-error" @click="cartOpen = false">Cancel</button>
-          <button class="btn btn-success" @click="submitSale">✅ Submit Sale</button>
+    <Transition name="fade">
+      <div
+        v-if="cartOpen"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+      >
+        <div
+          class="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full sm:w-11/12 text-[#393f4d] text-center"
+        >
+          <h2 class="text-2xl font-semibold mb-4">🛒 Transaction Summary</h2>
+          <div v-for="sale in filteredSales" :key="sale.id">
+            <p>{{ getItemName(sale.id) }} x {{ sale.qty }} - ${{ getItemTotal(sale.id) }}</p>
+          </div>
+          <p class="font-bold mt-4">Subtotal: ${{ subtotal }}</p>
+          <div class="flex gap-4 mt-4 justify-center">
+            <label><input type="radio" v-model="paymentMethod" value="cash" /> Cash</label>
+            <label><input type="radio" v-model="paymentMethod" value="card" /> Card</label>
+          </div>
+          <div class="mt-6 flex justify-between">
+            <button class="btn btn-error" @click="cartOpen = false">Cancel</button>
+            <button class="btn btn-success" @click="submitSale">✅ Submit Sale</button>
+          </div>
         </div>
       </div>
-    </div>
-
-    <!-- Sales Summary -->
-    <div class="mt-8 p-4 bg-gray-100 text-[#393f4d] rounded-lg shadow-md">
-      <h2 class="text-xl font-semibold">📈 Sales Summary</h2>
-      <p>Total Sales: ${{ salesStore.totalSales }}</p>
-      <p>Cash Sales: ${{ salesStore.cashSales }}</p>
-      <p>Card Sales: ${{ salesStore.cardSales }}</p>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -178,12 +179,12 @@ const tourId = route.query.tour_id || null;
 const inventory = ref([]);
 const sales = ref({});
 const paymentMethod = ref('cash');
-const stripeTotal = ref(0);
 const cartOpen = ref(false);
 const showVenue = ref('');
 const showDate = ref('');
 const softExpanded = ref(true);
 const hardExpanded = ref(true);
+const successMessage = ref('');
 
 const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
@@ -214,7 +215,12 @@ const groupedSoftItems = computed(() => {
     if (!grouped[item.name]) {
       grouped[item.name] = [];
     }
-    grouped[item.name].push(item);
+    grouped[item.name].push({
+      id: item.id,
+      size: item.size,
+      quantity: item.quantity,
+      price: item.price,
+    });
   });
 
   Object.keys(grouped).forEach((key) => {
@@ -222,6 +228,17 @@ const groupedSoftItems = computed(() => {
   });
 
   return grouped;
+});
+
+const subtotal = computed(() => {
+  return filteredSales.value
+    .reduce((sum, sale) => {
+      const item = [...hardItems.value, ...softItems.value].find(
+        (i) => Number(i.id) === Number(sale.id)
+      );
+      return sum + (item ? sale.qty * item.price : 0);
+    }, 0)
+    .toFixed(2);
 });
 
 const formatShowDate = (dateString) => {
@@ -265,12 +282,16 @@ const fetchInventory = async () => {
 };
 
 const getItemName = (id) => {
-  return [...hardItems.value, ...softItems.value].find((item) => item.id === id)?.name || 'Unknown';
+  const item = [...hardItems.value, ...softItems.value].find((i) => Number(i.id) === Number(id));
+  if (!item) return 'Unknown';
+  return item.type === 'soft' ? `${item.name} (${item.size})` : item.name;
 };
 
 const getItemTotal = (id) => {
-  const item = [...hardItems.value, ...softItems.value].find((item) => item.id === id);
-  return item ? (sales.value[id] * item.price).toFixed(2) : '0.00';
+  const item = [...hardItems.value, ...softItems.value].find(
+    (item) => Number(item.id) === Number(id)
+  );
+  return item && sales.value[id] ? (sales.value[id] * item.price).toFixed(2) : '0.00';
 };
 
 const submitSale = async () => {
@@ -285,5 +306,23 @@ const submitSale = async () => {
 
   sales.value = {};
   cartOpen.value = false;
+
+  successMessage.value = '✅💰 Sale Recorded Successfully! 💰✅';
+
+  setTimeout(() => {
+    successMessage.value = '';
+  }, 2000);
+
+  await salesStore.fetchSales(tourId);
+};
+
+const openCart = () => {
+  cartOpen.value = true;
+};
+
+const clearAll = () => {
+  Object.keys(sales.value).forEach((id) => {
+    sales.value[id] = 'Qty';
+  });
 };
 </script>
