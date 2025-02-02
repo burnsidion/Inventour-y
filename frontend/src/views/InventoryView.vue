@@ -27,7 +27,7 @@
 
         <div v-if="hardItems.length > 0" class="grid gap-4 text-[#393f4d]">
           <Transition name="fade">
-            <div v-if="hardExpanded" class="grid gap-4 overflow-y-auto max-h-[900px]">
+            <div v-if="hardExpanded" class="grid gap-4">
               <div
                 v-for="item in hardItems"
                 :key="item.id"
@@ -75,7 +75,7 @@
 
         <div v-if="Object.keys(softItemsGrouped).length > 0" class="grid gap-4 text-[#393f4d]">
           <Transition name="fade">
-            <div v-if="softExpanded" class="grid gap-4 overflow-y-auto max-h-[900px]">
+            <div v-if="softExpanded" class="grid gap-4">
               <div
                 v-for="(sizes, name) in softItemsGrouped"
                 :key="name"
@@ -93,24 +93,24 @@
                   </thead>
                   <tbody>
                     <tr
-                      v-for="(quantity, size) in sizes"
-                      :key="size"
+                      v-for="sizeEntry in sizes"
+                      :key="sizeEntry.id"
                       class="border-b hover:bg-gray-100 transition duration-200"
                     >
-                      <td class="p-2">{{ size }}</td>
+                      <td class="p-2">{{ sizeEntry.size }}</td>
                       <td
                         class="p-2 text-center"
-                        :class="quantity.quantity < 30 ? 'text-red-600' : ''"
+                        :class="sizeEntry.quantity < 30 ? 'text-red-600' : ''"
                       >
                         {{
-                          quantity.quantity < 30
-                            ? `${quantity.quantity} LOW STOCK!!!`
-                            : quantity.quantity
+                          sizeEntry.quantity < 30
+                            ? `${sizeEntry.quantity} LOW STOCK!!!`
+                            : sizeEntry.quantity
                         }}
                       </td>
                       <td class="p-2 text-right">
                         <button
-                          @click="deleteItemBySize(name, size)"
+                          @click="deleteItemBySize(name, sizeEntry.size)"
                           class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200"
                         >
                           🗑 Delete
@@ -144,6 +144,8 @@ const errorMessage = ref('');
 const softExpanded = ref(true);
 const hardExpanded = ref(true);
 const tourName = ref('');
+
+const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 const fetchInventory = async () => {
   try {
@@ -225,14 +227,22 @@ const softItemsGrouped = computed(() => {
   inventory.value.forEach((item) => {
     if (item.type === 'soft') {
       if (!grouped[item.name]) {
-        grouped[item.name] = {};
+        grouped[item.name] = [];
       }
-      grouped[item.name][item.size || 'One Size'] = {
-        quantity: item.quantity,
+      grouped[item.name].push({
         id: item.id,
-      };
+        size: item.size || 'One Size',
+        quantity: item.quantity,
+        price: item.price,
+      });
     }
   });
+
+  // Sort sizes within each grouped item
+  Object.keys(grouped).forEach((key) => {
+    grouped[key].sort((a, b) => sizeOrder.indexOf(a.size) - sizeOrder.indexOf(b.size));
+  });
+
   return grouped;
 });
 
