@@ -4,13 +4,14 @@
     <h1 class="text-3xl font-bold mb-4 text-center">📊 Sales Tracker for {{ showVenue }}</h1>
     <p class="text-ivory-600 mb-6 text-center">{{ formatShowDate(showDate) }}</p>
 
-    <div class="flex flex-col sm:flex-row gap-4 mb-4 justify-center sm:justify-center">
-      <!-- Back to Home Page Button -->
+    <!-- Button Container -->
+    <div
+      class="flex flex-col sm:flex-row gap-4 mb-4 justify-center sm:justify-center content-center items-center"
+    >
       <div class="flex justify-center">
         <router-link to="/" class="btn btn-primary"> ← Back to Home Page </router-link>
       </div>
-      <!-- Start Transaction Button -->
-      <div class="text-center mb-6">
+      <div class="text-center">
         <button
           class="btn btn-primary px-6 py-2"
           :disabled="!Object.values(sales).some((qty) => qty > 0)"
@@ -20,15 +21,30 @@
         </button>
       </div>
       <div>
-        <button 
-          @click="clearAll()"
-          class="btn btn-primary">
-          Clear All Quantities
-        </button>
+        <button @click="clearAll()" class="btn btn-primary px-6 py-2">Clear All Quantities</button>
       </div>
     </div>
 
-    <!-- Inventory Table (Responsive Grid) -->
+    <!-- Sales Summary -->
+    <div class="my-8 p-4 bg-gray-800 text-white rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold text-center mb-4">💰 Sales Summary</h2>
+      <div class="grid grid-cols-3 gap-4 text-center font-medium">
+        <div class="bg-gray-700 p-4 rounded flex flex-col items-center">
+          <p class="text-sm">Total Sales</p>
+          <p class="text-lg font-bold">${{ salesStore.totalSales }}</p>
+        </div>
+        <div class="bg-gray-700 p-4 rounded flex flex-col items-center">
+          <p class="text-sm">Cash Sales</p>
+          <p class="text-lg font-bold">${{ salesStore.cashSales }}</p>
+        </div>
+        <div class="bg-gray-700 p-4 rounded flex flex-col items-center">
+          <p class="text-sm">Card Sales</p>
+          <p class="text-lg font-bold">${{ salesStore.cardSales }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inventory Table -->
     <div class="grid md:grid-cols-2 sm:grid-cols-1 gap-6">
       <!-- Hard Items -->
       <div>
@@ -40,29 +56,24 @@
         </div>
         <Transition name="fade">
           <div v-if="hardExpanded">
-            <div
-              class="grid grid-cols-4 md:grid-cols-4 sm:grid-cols-2 gap-4 text-ivory border-b pb-2 font-bold text-center"
-            >
+            <div class="grid grid-cols-4 gap-4 text-ivory border-b pb-2 font-bold text-center">
               <span>Item</span>
               <span>Stock</span>
               <span>Price</span>
-              <span class="text-center">Sold</span>
+              <span>Sold</span>
             </div>
-
             <div
               v-for="item in hardItems"
               :key="item.id"
-              class="grid grid-cols-4 md:grid-cols-4 sm:grid-cols-2 gap-4 border-b py-2 items-center text-center"
+              class="grid grid-cols-4 gap-4 border-b py-2 items-center text-center"
             >
-              <span class="text-center">{{ item.name }}</span>
-              <span class="text-center" :class="item.quantity < 30 ? 'text-red-600' : ''">{{
-                item.quantity
-              }}</span>
-              <span class="text-center">${{ formattedPrice(item.price) }}</span>
+              <span class="whitespace-nowrap text-left">{{ item.name }}</span>
+              <span :class="item.quantity < 30 ? 'text-red-600' : ''">{{ item.quantity }}</span>
+              <span>${{ formattedPrice(item.price) }}</span>
               <div class="flex justify-center">
                 <input
                   type="number"
-                  class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px]"
+                  class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm"
                   v-model.number="sales[item.id]"
                   min="0"
                   placeholder="Qty"
@@ -82,43 +93,58 @@
           </button>
         </div>
 
-        <!-- Table Header -->
         <Transition name="fade">
-          <div v-if="softExpanded" class="overflow-y-auto max-h-[800px]">
-            <div class="grid grid-cols-3 gap-4 text-ivory border-b pb-2 font-bold text-center">
+          <div v-if="softExpanded">
+            <!-- Table Header (4 Columns) -->
+            <div class="grid grid-cols-4 gap-4 text-ivory border-b pb-2 font-bold text-center">
+              <span></span>
+              <!-- Collapse Button Column -->
               <span>Item</span>
-              <span>Sizes (Stock)</span>
-              <span>Sold</span>
+              <span>Sizes</span>
+              <span>Amount</span>
             </div>
+
+            <!-- Item Rows -->
             <div
               v-for="(sizes, itemName) in groupedSoftItems"
               :key="itemName"
-              class="grid grid-cols-3 gap-4 border-b py-2 items-start"
+              class="grid grid-cols-4 gap-4 border-b py-2"
             >
-              <div class="font-semibold text-lg self-start text-center">
+              <!-- Collapse Button -->
+              <div class="flex justify-center py-4">
+                <button
+                  @click="toggleCollapse(itemName)"
+                  class="w-8 h-8 flex items-center py-8 px-8 justify-center rounded bg-gray-700 text-white text-lg"
+                >
+                  {{ collapsedRows[itemName] ? '+' : '-' }}
+                </button>
+              </div>
+
+              <!-- Item Name & Price -->
+              <div class="font-semibold text-md text-center">
                 {{ itemName }} ${{ sizes.length > 0 ? sizes[0].price : 'N/A' }}
               </div>
+
               <!-- Sizes Column -->
-              <div class="flex flex-col gap-2 items-center self-start w-full">
+              <div v-if="!collapsedRows[itemName]" class="flex flex-col gap-2 items-center w-full">
                 <span
                   v-for="size in sizes"
                   :key="size.id"
-                  :class="[
-                    'bg-gray-700 content-center px-3 py-1 rounded text-center w-full text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px] lg:w-[50%]',
-                    size.quantity < 30 ? 'text-red-600' : 'text-white',
-                  ]"
+                  class="bg-gray-700 px-1 py-1 rounded text-center content-center w-[80px] text-sm sm:text-xs lg:text-base min-h-[40px] whitespace-nowrap"
+                  :class="size.quantity < 30 ? 'text-red-600' : ''"
                 >
                   {{ size.size }} ({{ size.quantity }})
                 </span>
               </div>
+
               <!-- Sold Quantity Inputs -->
-              <div class="flex flex-col gap-2 items-center self-start w-full">
+              <div v-if="!collapsedRows[itemName]" class="flex flex-col gap-2 items-center w-full">
                 <input
                   v-for="size in sizes"
                   :key="size.id"
                   v-model.number="sales[size.id]"
                   type="number"
-                  class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm sm:text-xs lg:text-base min-h-[40px] lg:min-h-[35px]"
+                  class="border rounded py-1 px-3 w-[80px] text-center text-sm min-h-[40px]"
                   min="0"
                   placeholder="Qty"
                 />
@@ -129,8 +155,14 @@
       </div>
     </div>
 
-    <div v-if="successMessage" class="text-center text-green-500 font-semibold mt-4">
-      {{ successMessage }}
+    <!-- Success Message -->
+    <div
+      v-if="successMessage"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+    >
+      <div class="text-center text-green-500 font-semibold mt-4">
+        {{ successMessage }}
+      </div>
     </div>
 
     <!-- Transaction Modal -->
@@ -139,9 +171,7 @@
         v-if="cartOpen"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
       >
-        <div
-          class="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full sm:w-11/12 text-[#393f4d] text-center"
-        >
+        <div class="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full text-[#393f4d] text-center">
           <h2 class="text-2xl font-semibold mb-4">🛒 Transaction Summary</h2>
           <div v-for="sale in filteredSales" :key="sale.id">
             <p>{{ getItemName(sale.id) }} x {{ sale.qty }} - ${{ getItemTotal(sale.id) }}</p>
@@ -185,10 +215,15 @@ const showDate = ref('');
 const softExpanded = ref(true);
 const hardExpanded = ref(true);
 const successMessage = ref('');
+const collapsedRows = ref({});
 
 const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 onMounted(async () => {
+  const storedState = localStorage.getItem('collapsedRows');
+  if (storedState) {
+    collapsedRows.value = JSON.parse(storedState);
+  }
   if (!tourId) {
     console.error('🚨 No tourId found in query params');
   } else {
@@ -324,5 +359,10 @@ const clearAll = () => {
   Object.keys(sales.value).forEach((id) => {
     sales.value[id] = 'Qty';
   });
+};
+
+const toggleCollapse = (itemKey) => {
+  collapsedRows.value[itemKey] = !collapsedRows.value[itemKey];
+  localStorage.setItem('collapsedRows', JSON.stringify(collapsedRows.value));
 };
 </script>
