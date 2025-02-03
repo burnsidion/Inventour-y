@@ -37,12 +37,11 @@
   <script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
-import { useAuthStore } from '@/stores/auth';
+import { useTourStore } from '@/stores/tour';
 
-const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
+const tourStore = useTourStore();
 
 const tourId = ref(null);
 const venue = ref('');
@@ -59,24 +58,13 @@ onMounted(() => {
 });
 
 const submitShow = async () => {
-  try {
-    const token = authStore.token;
-    const request = await axios.post(
-      'http://localhost:5002/api/shows',
-      {
-        tour_id: tourId.value,
-        venue: venue.value,
-        city: city.value,
-        state: state.value,
-        date: date.value,
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const id = request.data.show.id;
-    router.push(`/shows/${id}/?tour_id=${tourId.value}`);
-  } catch (error) {
-    console.error('Error creating show:', error.response?.data || error.message);
-  }
+  await tourStore.addShow({
+    tour_id: tourId.value,
+    vanue: venue.value,
+    city: city.value,
+    state: state.value,
+    date: date.value
+  })
 };
 
 const cancelSubmit = () => {

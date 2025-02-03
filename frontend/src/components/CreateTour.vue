@@ -84,8 +84,6 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-// import axios from 'axios';
-// import { useAuthStore } from '@/stores/auth';
 import { Field, ErrorMessage, defineRule } from 'vee-validate';
 import { required, min, max } from '@vee-validate/rules';
 
@@ -97,7 +95,6 @@ defineRule('max', max);
 
 const tourStore = useTourStore();
 const router = useRouter();
-// const authStore = useAuthStore();
 const loading = ref(false);
 const errorMessage = ref('');
 
