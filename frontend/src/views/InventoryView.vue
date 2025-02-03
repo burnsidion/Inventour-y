@@ -36,13 +36,13 @@
                 <h3 class="font-semibold">{{ item.name }}</h3>
                 <table class="w-full border-collapse">
                   <thead>
-                    <tr class="border-b">
+                    <tr class="border-b border-gray-500">
                       <th class="text-left p-2">Quantity</th>
                       <th class="text-right p-2">Price</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr class="border-b">
+                    <tr class="border-b border-gray-500">
                       <td
                         class="p-2"
                         :class="item.quantity < 30 ? 'text-red-600 animate-pulse' : ''"
@@ -88,17 +88,17 @@
                 <p class="text-gray-600 mb-2">Price: ${{ getSoftItemPrice(name) }}</p>
                 <table class="w-full border-collapse">
                   <thead>
-                    <tr class="border-b">
+                    <tr class="border-b border-gray-500">
                       <th class="text-left p-2">Size</th>
                       <th class="p-2">Quantity</th>
-                      <th class="text-end pr-7">Actions</th>
+                      <th class="text-center p-2">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
                       v-for="sizeEntry in sizes"
                       :key="sizeEntry.id"
-                      class="border-b hover:bg-gray-100 transition duration-200"
+                      class="border-b border-gray-500 hover:bg-gray-100 transition duration-200"
                     >
                       <td class="p-2">{{ sizeEntry.size }}</td>
                       <td
@@ -112,12 +112,20 @@
                         }}
                       </td>
                       <td class="p-2 text-right">
-                        <button
-                          @click="deleteItemBySize(name, sizeEntry.size)"
-                          class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200"
-                        >
-                          🗑 Delete
-                        </button>
+                        <div class="flex flex-col lg:flex-row gap-2 justify-end">
+                          <button
+                            @click="deleteItemBySize(name, sizeEntry.size)"
+                            class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200"
+                          >
+                            🗑 Delete
+                          </button>
+                          <button
+                            @click="editItem(name, sizeEntry.size)"
+                            class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200"
+                          >
+                            📝 Edit Item
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   </tbody>
