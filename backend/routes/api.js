@@ -404,10 +404,42 @@ router.post("/inventory/update", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE inventory 
-       SET quantity = $1 
-       WHERE id = $2 
+       SET price = $1, quantity = $2 
+       WHERE id = $3 
        RETURNING *`,
-      [new_quantity, inventory_id]
+      [new_price, new_quantity, inventory_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Inventory item not found" });
+    }
+
+    res.status(200).json({
+      message: "Inventory updated successfully",
+      item: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Error updating inventory:", error);
+    res.status(500).json({ error: "Failed to update inventory" });
+  }
+});
+
+router.put("/inventory/:id", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { price, new_quantity } = req.body;
+
+  if (!id || (price === undefined && new_quantity === undefined)) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE inventory 
+       SET price = COALESCE($1, price), 
+           quantity = COALESCE(quantity, 0) + COALESCE($2, 0) 
+       WHERE id = $3 
+       RETURNING *`,
+      [price, new_quantity, id]
     );
 
     if (result.rows.length === 0) {

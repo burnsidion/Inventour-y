@@ -96,8 +96,6 @@ const submitInventory = async () => {
     price: price.value,
   };
 
-  console.log('Submitting Inventory:', payload);
-
   try {
     const token = authStore.token;
 
@@ -106,8 +104,6 @@ const submitInventory = async () => {
       `http://localhost:5002/api/inventory?tour_id=${route.query.tour_id}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
-
-    console.log('Fetched Inventory Data:', existingInventoryResponse.data); // LOG FULL RESPONSE
 
     // Check for a duplicate (name + type match)
     const duplicateItem = existingInventoryResponse.data.find(
