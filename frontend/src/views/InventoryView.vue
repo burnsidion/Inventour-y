@@ -7,7 +7,6 @@
       @close="closeEditForm"
       @save="saveInventoryChanges"
     />
-
     <!-- Dynamic tour name -->
     <h1 class="text-3xl font-bold my-6 text-center">Inventory for {{ tourName || 'Tour' }}</h1>
 
@@ -157,43 +156,26 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
+import { useInventoryStore } from '@/stores/inventory';
 import axios from 'axios';
+import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/stores/auth';
 import EditInventoryForm from '@/components/EditInventoryForm.vue';
 
 const authStore = useAuthStore();
 const route = useRoute();
+const inventoryStore = useInventoryStore();
 
-const inventory = ref([]);
+const { inventory } = storeToRefs(inventoryStore);
+const { fetchInventory } = inventoryStore;
+
 const editingItem = ref(null);
-const loading = ref(true);
-const errorMessage = ref('');
 const softExpanded = ref(true);
 const hardExpanded = ref(true);
 const tourName = ref('');
 const modalOpen = ref(false);
-const forceRender = ref(0);
 
 const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-
-const fetchInventory = async () => {
-  try {
-    const token = authStore.token;
-    const response = await axios.get(
-      `http://localhost:5002/api/inventory?tour_id=${route.params.id}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    inventory.value = response.data;
-    forceRender.value += 1;
-  } catch (error) {
-    errorMessage.value = 'Failed to load inventory.';
-    console.error('Error fetching inventory:', error);
-  } finally {
-    loading.value = false;
-  }
-};
 
 const fetchTourDetails = async () => {
   try {
@@ -228,7 +210,7 @@ const saveInventoryChanges = async (updatedData) => {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    await fetchInventory();
+    await inventoryStore.fetchInventory();
     editingItem.value = null;
   } catch (error) {
     console.error('Error updating inventory:', error.response?.data || error);
@@ -267,7 +249,7 @@ const deleteItem = async (itemId) => {
 };
 
 const deleteItemBySize = (name, size) => {
-  const itemToDelete = inventory.value.find((item) => item.name === name && item.size === size);
+  const itemToDelete = inventory.find((item) => item.name === name && item.size === size);
 
   if (!itemToDelete) {
     console.error('Item not found.');
@@ -306,7 +288,7 @@ const softItemsGrouped = computed(() => {
 });
 
 onMounted(async () => {
-  await Promise.all([fetchTourDetails(), fetchInventory()]);
+  await Promise.all([fetchTourDetails(), fetchInventory(route.params.id)]);
 });
 </script>
 
