@@ -65,7 +65,6 @@ const submitLogin = async () => {
       email: email.value,
       password: password.value,
     });
-    console.log('Login Successfull!', response.data);
 
     authStore.setUser(response.data.user, response.data.token);
     router.push('/');

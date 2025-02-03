@@ -1,5 +1,13 @@
 <template>
   <div class="p-6">
+    <EditInventoryForm
+      v-if="editingItem"
+      :inventory-item="editingItem"
+      :modal-open="modalOpen"
+      @close="closeEditForm"
+      @save="saveInventoryChanges"
+    />
+
     <!-- Dynamic tour name -->
     <h1 class="text-3xl font-bold my-6 text-center">Inventory for {{ tourName || 'Tour' }}</h1>
 
@@ -30,7 +38,7 @@
             <div v-if="hardExpanded" class="grid gap-4">
               <div
                 v-for="item in hardItems"
-                :key="item.id"
+                :key="`hard-${item.id}`"
                 class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce"
               >
                 <h3 class="font-semibold">{{ item.name }}</h3>
@@ -44,7 +52,7 @@
                   <tbody>
                     <tr class="border-b border-gray-500">
                       <td
-                        class="p-2"
+                        class="p-2 z-[10]"
                         :class="item.quantity < 30 ? 'text-red-600 animate-pulse' : ''"
                       >
                         {{ item.quantity < 30 ? `${item.quantity} LOW STOCK!!` : item.quantity }}
@@ -53,9 +61,15 @@
                     </tr>
                   </tbody>
                 </table>
-                <div class="flex justify-center">
-                  <button @click="deleteItem(item.id)" class="btn btn-error text-white mt-2">
+                <div class="flex justify-center mt-2 gap-2">
+                  <button @click="deleteItem(item.id)" class="btn btn-error text-white">
                     🗑 Delete Item
+                  </button>
+                  <button
+                    @click="toggleEditForm(item.name, item.size ? item.size : null)"
+                    class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200"
+                  >
+                    📝 Edit Item
                   </button>
                 </div>
               </div>
@@ -115,13 +129,13 @@
                         <div class="flex flex-col lg:flex-row gap-2 justify-end">
                           <button
                             @click="deleteItemBySize(name, sizeEntry.size)"
-                            class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200"
+                            class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
                           >
                             🗑 Delete
                           </button>
                           <button
-                            @click="editItem(name, sizeEntry.size)"
-                            class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200"
+                            @click="toggleEditForm(name, sizeEntry.size)"
+                            class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
                           >
                             📝 Edit Item
                           </button>
@@ -145,16 +159,20 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
+import EditInventoryForm from '@/components/EditInventoryForm.vue';
 
 const authStore = useAuthStore();
 const route = useRoute();
 
 const inventory = ref([]);
+const editingItem = ref(null);
 const loading = ref(true);
 const errorMessage = ref('');
 const softExpanded = ref(true);
 const hardExpanded = ref(true);
 const tourName = ref('');
+const modalOpen = ref(false);
+const forceRender = ref(0);
 
 const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
@@ -168,6 +186,7 @@ const fetchInventory = async () => {
       }
     );
     inventory.value = response.data;
+    forceRender.value += 1;
   } catch (error) {
     errorMessage.value = 'Failed to load inventory.';
     console.error('Error fetching inventory:', error);
@@ -189,6 +208,36 @@ const fetchTourDetails = async () => {
   } catch (error) {
     console.error('Error fetching tour details', error);
   }
+};
+
+const toggleEditForm = (name, size = null) => {
+  if (!name || typeof name !== 'string') return;
+  const selectedItem = inventory.value.find(
+    (item) => item.name.trim() === name.trim() && (size ? item.size === size : item.size === null)
+  );
+
+  if (!selectedItem) return;
+  editingItem.value = { ...selectedItem };
+  modalOpen.value = true;
+};
+
+const saveInventoryChanges = async (updatedData) => {
+  try {
+    const token = authStore.token;
+    await axios.put(`http://localhost:5002/api/inventory/${updatedData.id}`, updatedData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    await fetchInventory();
+    editingItem.value = null;
+  } catch (error) {
+    console.error('Error updating inventory:', error.response?.data || error);
+  }
+};
+
+const closeEditForm = () => {
+  editingItem.value = null;
+  modalOpen.value = false;
 };
 
 const formattedPrice = (price) => {
@@ -249,7 +298,6 @@ const softItemsGrouped = computed(() => {
     }
   });
 
-  // Sort sizes within each grouped item
   Object.keys(grouped).forEach((key) => {
     grouped[key].sort((a, b) => sizeOrder.indexOf(a.size) - sizeOrder.indexOf(b.size));
   });
