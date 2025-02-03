@@ -1,50 +1,79 @@
 import { defineStore } from 'pinia';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 
-export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    user: null,
-    token: null,
-    inactivityTimer: null,
-  }),
-  actions: {
-    setUser(userData, userToken) {
-      this.user = userData;
-      this.token = userToken;
-      localStorage.setItem('token', userToken);
-      this.startInactivityTimer();
-    },
-    logout() {
-      this.user = null;
-      this.token = null;
-      localStorage.removeItem('token');
-      this.clearInactivityTimer();
-    },
-    loadUserFromStorage() {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        this.token = storedToken;
-        this.startInactivityTimer();
-      }
-    },
-    startInactivityTimer() {
-      this.clearInactivityTimer();
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref(null);
+  const token = ref(localStorage.getItem('token') || null);
+  let inactivityTimer = null;
+  const router = useRouter();
 
-      this.inactivityTimer = setTimeout(
-        () => {
-          console.log('User inactive, logging out...');
-          this.logout();
-          const router = useRouter();
-          router.push('/login');
-        },
-        30 * 60 * 1000,
-      );
-    },
-    clearInactivityTimer() {
-      if (this.inactivityTimer) {
-        clearTimeout(this.inactivityTimer);
-        this.inactivityTimer = null;
-      }
-    },
-  },
+  const setUser = (userData, userToken) => {
+    user.value = userData;
+    token.value = userToken;
+    localStorage.setItem('token', userToken);
+    startInactivityTimer();
+  };
+
+  const logout = () => {
+    user.value = null;
+    token.value = null;
+    localStorage.removeItem('token');
+    clearInactivityTimer();
+    router.push('/login');
+  };
+
+  const loadUserFromStorage = () => {
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      token.value = storedToken;
+      startInactivityTimer();
+    }
+  };
+
+  const startInactivityTimer = () => {
+    clearInactivityTimer();
+    inactivityTimer = setTimeout(
+      () => {
+        console.log('User inactive, logging out...');
+        logout();
+      },
+      30 * 60 * 1000,
+    );
+  };
+
+  const clearInactivityTimer = () => {
+    if (inactivityTimer) {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = null;
+    }
+  };
+
+  // ✅ New Signup Method (Now Consistent with Other Stores)
+  const signupUser = async (userData) => {
+    try {
+      const response = await axios.post('http://localhost:5002/api/users', userData);
+
+      console.log('✅ User created:', response.data);
+      return { success: true, message: 'User created successfully' };
+    } catch (error) {
+      console.error('🚨 Error signing up:', error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Signup failed. Please try again.',
+      };
+    }
+  };
+
+  return {
+    user,
+    token,
+    setUser,
+    logout,
+    loadUserFromStorage,
+    startInactivityTimer,
+    clearInactivityTimer,
+    signupUser,
+  };
 });
