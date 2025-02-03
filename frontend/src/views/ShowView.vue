@@ -68,7 +68,9 @@
               class="grid grid-cols-4 gap-4 border-b py-2 items-center text-center"
             >
               <span class="whitespace-nowrap text-left">{{ item.name }}</span>
-              <span :class="item.quantity < 30 ? 'text-red-600 animate-pulse' : ''">{{ item.quantity }}</span>
+              <span :class="item.quantity < 30 ? 'text-red-600 animate-pulse' : ''">{{
+                item.quantity
+              }}</span>
               <span>${{ formattedPrice(item.price) }}</span>
               <div class="flex justify-center">
                 <input
@@ -194,20 +196,24 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useSalesStore } from '@/stores/salesStore';
-import { useAuthStore } from '@/stores/auth';
+import { useTourStore } from '@/stores/tour';
+import { useInventoryStore } from '@/stores/inventory';
 import { useRoute } from 'vue-router';
-import axios from 'axios';
 import { format } from 'date-fns';
 
-const authStore = useAuthStore();
+
 const salesStore = useSalesStore();
+const tourStore = useTourStore();
+const inventoryStore = useInventoryStore();
 const route = useRoute();
 
 const tourId = route.query.tour_id || null;
 const showId = route.params.id;
 
-const inventory = ref([]);
+const { inventory } = storeToRefs(inventoryStore);
+
 const sales = ref({});
 const paymentMethod = ref('cash');
 const cartOpen = ref(false);
@@ -228,7 +234,7 @@ onMounted(async () => {
   if (!tourId) {
     console.error('🚨 No tourId found in query params');
   } else {
-    await Promise.all([fetchInventory(), salesStore.fetchSales(showId), fetchShowDetails()]);
+    await Promise.all([inventoryStore.fetchInventory(tourId), salesStore.fetchSales(showId), fetchShowDetails()]);
   }
 });
 
@@ -289,31 +295,10 @@ const formattedPrice = (price) => {
 };
 
 const fetchShowDetails = async () => {
-  try {
-    const token = authStore.token;
-    const response = await axios.get(`http://localhost:5002/api/shows/${route.params.id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (response.data) {
-      showVenue.value = response.data.venue;
-      showDate.value = response.data.date;
-    }
-  } catch (error) {
-    console.error('Error fetching show details:', error.response?.data || error.message);
-  }
-};
-
-const fetchInventory = async () => {
-  try {
-    const token = authStore.token;
-    const response = await axios.get(`http://localhost:5002/api/inventory?tour_id=${tourId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    inventory.value = response.data;
-  } catch (error) {
-    console.error('Error fetching inventory:', error.response?.data || error.message);
+  const details = await tourStore.getShowDetails(showId);
+  if(details) {
+    showVenue.value = details.venue,
+    showDate.value = details.showDate
   }
 };
 
