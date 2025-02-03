@@ -51,11 +51,13 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { useForm, useField } from 'vee-validate';
+import { useAuthStore } from '@/stores/auth';
 import * as yup from 'yup';
-import axios from 'axios';
 import { useRouter } from 'vue-router';
 
 import SkeletonLoader from './SkeletonLoader.vue';
+
+const authStore = useAuthStore();
 
 const schema = yup.object({
   name: yup.string().required('Name is required'),
@@ -81,23 +83,21 @@ const formError = ref('');
 const loading = ref(true);
 
 const submitForm = handleSubmit(async (values) => {
-  try {
-    const response = await axios.post('http://localhost:5002/api/users', {
-      name: values.name,
-      email: values.email,
-      password: values.password,
-      role: role,
-    });
+  const result = await authStore.signupUser({
+    name: values.name,
+    email: values.email,
+    password: values.password,
+    role: role,
+  });
 
-    console.log('✅ User created:', response.data);
+  if (result.success) {
     signupSuccess.value = true;
 
     setTimeout(() => {
       router.push('/login');
     }, 2000);
-  } catch (error) {
-    console.error('🚨 Error signing up:', error.response?.data || error.message);
-    formError.value = error.response?.data?.message || 'Signup failed. Please try again.';
+  } else {
+    formError.value = result.message;
   }
 });
 

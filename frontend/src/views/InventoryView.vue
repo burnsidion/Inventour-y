@@ -75,7 +75,7 @@
             </div>
           </Transition>
         </div>
-        <p v-else class="text-gray-500">No hard items in inventory.</p>
+        <p v-else class="text-gray-500 text-center">No hard items in inventory.</p>
       </div>
 
       <!-- Soft Items Section -->
@@ -147,7 +147,7 @@
             </div>
           </Transition>
         </div>
-        <p v-else class="text-gray-500">No soft items in inventory.</p>
+        <p v-else class="text-gray-500 text-center">No soft items in inventory.</p>
       </div>
     </div>
   </div>
@@ -221,7 +221,7 @@ const getSoftItemPrice = (name) => {
 };
 
 const deleteItemBySize = (name, size) => {
-  const itemToDelete = inventory.find((item) => item.name === name && item.size === size);
+  const itemToDelete = inventory.value.find((item) => item.name === name && item.size === size);
 
   if (!itemToDelete) {
     console.error('Item not found.');
