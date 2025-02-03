@@ -573,4 +573,29 @@ router.get("/sales", authenticateToken, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch sales" });
   }
 });
+
+router.get("/sales/tour", authenticateToken, async (req, res) => {
+  const { tour_id } = req.query;
+
+  if (!tour_id) {
+    return res
+      .status(400)
+      .json({ error: "Missing required query parameter: tour_id" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT SUM(sales.total_amount) AS total_sales
+       FROM sales
+       JOIN shows ON sales.show_id = shows.id
+       WHERE shows.tour_id = $1`,
+      [tour_id]
+    );
+
+    res.status(200).json({ total_sales: result.rows[0]?.total_sales || 0 });
+  } catch (error) {
+    console.error("Error fetching total tour sales:", error);
+    res.status(500).json({ error: "Failed to fetch total sales for tour" });
+  }
+});
 export default router;

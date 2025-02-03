@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/auth';
 export const useSalesStore = defineStore('sales', () => {
   const authStore = useAuthStore();
   const sales = ref([]);
-  const totalSales = ref(0);
+  const totalSales = ref({});
   const cashSales = ref(0);
   const cardSales = ref(0);
 
@@ -37,9 +37,28 @@ export const useSalesStore = defineStore('sales', () => {
 
   const resetSales = () => {
     sales.value = [];
-    totalSales.value = 0;
+    totalSales.value = {};
     cashSales.value = 0;
     cardSales.value = 0;
+  };
+
+  const fetchTourTotalSales = async (tourId) => {
+    if (!tourId) {
+      console.error('🚨 fetchTourTotalSales called without tourId');
+      return;
+    }
+
+    try {
+      const token = authStore.token;
+      const response = await axios.get(`http://localhost:5002/api/sales/tour?tour_id=${tourId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      totalSales.value[tourId] = response.data.total_sales || 0;
+    } catch (error) {
+      console.error('Error fetching total tour sales:', error.response?.data || error.message);
+      totalSales.value[tourId] = 0;
+    }
   };
 
   const calculateTotals = () => {
@@ -72,5 +91,5 @@ export const useSalesStore = defineStore('sales', () => {
     }
   };
 
-  return { sales, totalSales, cashSales, cardSales, fetchSales, addSale };
+  return { sales, totalSales, cashSales, cardSales, fetchSales, addSale, fetchTourTotalSales };
 });

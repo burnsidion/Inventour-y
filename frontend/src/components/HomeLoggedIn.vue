@@ -17,9 +17,14 @@
             <h2 class="text-xl font-semibold text-center md:text-left text-[#393f4d]">
               {{ tour.name }}
             </h2>
-            <p class="text-gray-600 text-center md:text-left">
-              📅 {{ formatTourDate(tour.start_date) }} - {{ formatTourDate(tour.end_date) }}
-            </p>
+            <div class="flex justify-between">
+              <p class="text-gray-600 text-center md:text-left">
+                📅 {{ formatTourDate(tour.start_date) }} - {{ formatTourDate(tour.end_date) }}
+              </p>
+              <p class="text-gray-600 text-center md:text-left">
+                💰 Total Sales: ${{ salesStore.totalSales[tour.id] || 0 }}
+              </p>
+            </div>
           </div>
 
           <!-- Shows List -->
@@ -48,7 +53,9 @@
             <router-link :to="`/tours/${tour.id}/inventory`" class="btn btn-secondary flex-1">
               📦 View Inventory
             </router-link>
-            <button @click="tourStore.deleteTour(tour.id)" class="btn btn-error flex-1">🗑 Delete Tour</button>
+            <button @click="tourStore.deleteTour(tour.id)" class="btn btn-error flex-1">
+              🗑 Delete Tour
+            </button>
           </div>
         </div>
       </div>
@@ -72,11 +79,14 @@ import { storeToRefs } from 'pinia';
 import { format } from 'date-fns';
 import { useRouter } from 'vue-router';
 import { useTourStore } from '@/stores/tour';
+import { useSalesStore } from '@/stores/salesStore';
 
 import SidebarMenu from '@/components/SidebarMenu.vue';
 
 const router = useRouter();
 const tourStore = useTourStore();
+const salesStore = useSalesStore();
+
 const { tours } = storeToRefs(tourStore);
 
 const createShow = (tourId) => {
@@ -93,5 +103,8 @@ const createTour = () => {
 
 onMounted(async () => {
   await tourStore.fetchTours();
+  for (const tour of tours.value) {
+    await salesStore.fetchTourTotalSales(tour.id);
+  }
 });
 </script>
