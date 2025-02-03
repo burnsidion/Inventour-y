@@ -3,7 +3,7 @@
     <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
       <h1 class="text-2xl font-bold mb-4 text-[#393f4d]">Create a New Tour</h1>
 
-      <form @submit.prevent="createTour" class="space-y-4">
+      <form @submit.prevent="tourStore.createTour(tour)" class="space-y-4">
         <!-- Tour Name -->
         <div>
           <label for="name" class="block text-gray-700 font-medium">Tour Name</label>
@@ -84,17 +84,20 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
-import { useAuthStore } from '@/stores/auth';
+// import axios from 'axios';
+// import { useAuthStore } from '@/stores/auth';
 import { Field, ErrorMessage, defineRule } from 'vee-validate';
 import { required, min, max } from '@vee-validate/rules';
+
+import { useTourStore } from '@/stores/tour';
 
 defineRule('required', required);
 defineRule('min', min);
 defineRule('max', max);
 
+const tourStore = useTourStore();
 const router = useRouter();
-const authStore = useAuthStore();
+// const authStore = useAuthStore();
 const loading = ref(false);
 const errorMessage = ref('');
 
@@ -104,28 +107,6 @@ const tour = ref({
   start_date: '',
   end_date: '',
 });
-
-const createTour = async () => {
-  loading.value = true;
-  errorMessage.value = '';
-
-  try {
-    const token = authStore.token;
-    const response = await axios.post('http://localhost:5002/api/tours', tour.value, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (response.status === 201) {
-      router.push('/');
-    }
-  } catch (error) {
-    errorMessage.value = error.response?.data?.message || 'Failed to create tour';
-  } finally {
-    loading.value = false;
-  }
-};
 
 const cancelSubmit = () => {
   router.push(`/`);

@@ -367,28 +367,26 @@ router.post("/inventory", authenticateToken, async (req, res) => {
 router.get("/inventory", authenticateToken, async (req, res) => {
   const { tour_id } = req.query;
 
-  if (!tour_id) {
+  if (!tour_id || isNaN(Number(tour_id))) {
     return res
       .status(400)
-      .json({ error: "Missing required query parameter: tour_id" });
+      .json({ error: "Invalid or missing tour_id query parameter" });
   }
 
   try {
     const result = await pool.query(
       "SELECT * FROM inventory WHERE tour_id = $1 ORDER BY name ASC",
-      [tour_id]
+      [Number(tour_id)]
     );
 
     if (result.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No inventory items found for this tour" });
+      return res.status(200).json([]);
     }
 
     res.status(200).json(result.rows);
   } catch (error) {
     console.error("Error fetching inventory:", error);
-    res.status(500).json({ error: "Failed to fetch inventory items" });
+    res.status(500).json({ error: "Failed to fetch inventory" });
   }
 });
 
