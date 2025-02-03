@@ -51,15 +51,54 @@ export const useTourStore = defineStore('tour', () => {
       return response.data;
     } catch (error) {
       if (error.response?.status === 404) {
-        console.warn(`No shows found for tour ${tourId}.`);
+        console.warn(`📌 No shows found for tour ${tourId}. Returning an empty array.`);
         return [];
       } else {
         console.error(
-          `Error fetching shows for tour ${tourId}:`,
+          `❌ Critical error fetching shows for tour ${tourId}:`,
           error.response?.data || error.message,
         );
-        return [];
+        throw error;
       }
+    }
+  };
+
+  const deleteShow = async (tourId, showId) => {
+    if (!confirm('Are you sure you want to delete this show?')) return;
+
+    try {
+      const token = authStore.token;
+      await axios.delete(`http://localhost:5002/api/shows/${showId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const tourIndex = tours.value.findIndex((tour) => tour.id === tourId);
+      if (tourIndex !== -1) {
+        tours.value[tourIndex].shows = tours.value[tourIndex].shows.filter(
+          (show) => show.id !== showId,
+        );
+      }
+
+      console.log('Show deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting show:', error.response?.data || error.message);
+    }
+  };
+
+  const deleteTour = async (tourId) => {
+    if (!confirm('Are you sure you want to delete this tour?')) return;
+
+    try {
+      const token = authStore.token;
+      await axios.delete(`http://localhost:5002/api/tours/${tourId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      tours.value = tours.value.filter((tour) => tour.id !== tourId);
+    } catch (error) {
+      console.error('Error deleting tour:', error.response?.data || error.message);
     }
   };
 
@@ -69,5 +108,7 @@ export const useTourStore = defineStore('tour', () => {
     fetchTourDetails,
     fetchTours,
     fetchShows,
+    deleteTour,
+    deleteShow,
   };
 });

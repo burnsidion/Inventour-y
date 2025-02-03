@@ -33,7 +33,7 @@
                 📍 {{ show.venue }} - {{ formatTourDate(show.date) }}
               </router-link>
               <button
-                @click="deleteShow(tour.id, show.id)"
+                @click="tourStore.deleteShow(tour.id, show.id)"
                 class="text-red-500 hover:text-red-700 ml-4"
               >
                 🗑 Delete
@@ -48,7 +48,7 @@
             <router-link :to="`/tours/${tour.id}/inventory`" class="btn btn-secondary flex-1">
               📦 View Inventory
             </router-link>
-            <button @click="deleteTour(tour.id)" class="btn btn-error flex-1">🗑 Delete Tour</button>
+            <button @click="tourStore.deleteTour(tour.id)" class="btn btn-error flex-1">🗑 Delete Tour</button>
           </div>
         </div>
       </div>
@@ -67,62 +67,20 @@
 </template>
   
 <script setup>
-import axios from 'axios';
 import { onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { format } from 'date-fns';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
 import { useTourStore } from '@/stores/tour';
 
 import SidebarMenu from '@/components/SidebarMenu.vue';
 
-const authStore = useAuthStore();
 const router = useRouter();
 const tourStore = useTourStore();
 const { tours } = storeToRefs(tourStore);
 
 const createShow = (tourId) => {
   router.push(`/shows/create?tour_id=${tourId}`);
-};
-
-const deleteTour = async (tourId) => {
-  if (!confirm('Are you sure you want to delete this tour?')) return;
-
-  try {
-    const token = authStore.token;
-    await axios.delete(`http://localhost:5002/api/tours/${tourId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    tours.value = tours.value.filter((tour) => tour.id !== tourId);
-  } catch (error) {
-    console.error('Error deleting tour:', error.response?.data || error.message);
-  }
-};
-
-const deleteShow = async (tourId, showId) => {
-  if (!confirm('Are you sure you want to delete this show?')) return;
-
-  try {
-    const token = authStore.token;
-    await axios.delete(`http://localhost:5002/api/shows/${showId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const tourIndex = tours.value.findIndex((tour) => tour.id === tourId);
-    if (tourIndex !== -1) {
-      tours.value[tourIndex].shows = tours.value[tourIndex].shows.filter(
-        (show) => show.id !== showId
-      );
-    }
-
-    console.log('Show deleted successfully.');
-  } catch (error) {
-    console.error('Error deleting show:', error.response?.data || error.message);
-  }
 };
 
 const formatTourDate = (dateString) => {
