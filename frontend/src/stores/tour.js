@@ -2,11 +2,44 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from './auth';
+import { useRouter } from 'vue-router';
 
 export const useTourStore = defineStore('tour', () => {
   const authStore = useAuthStore();
+  const router = useRouter();
+
   const tourName = ref('');
   const tours = ref([]);
+  const loading = ref(false);
+  const errorMessage = ref('');
+
+  const createTour = async (tourData) => {
+    loading.value = true;
+    errorMessage.value = '';
+
+    try {
+      const token = authStore.token;
+
+      const formattedTourData = {
+        ...tourData,
+        start_date: tourData.start_date || null,
+        end_date: tourData.end_date || null,
+      };
+
+      const response = await axios.post('http://localhost:5002/api/tours', formattedTourData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.status === 201) {
+        tours.value.push(response.data);
+        router.push('/');
+      }
+    } catch (error) {
+      errorMessage.value = error.response?.data?.message || 'Failed to create tour';
+    } finally {
+      loading.value = false;
+    }
+  };
 
   const fetchTourDetails = async (tourId) => {
     try {
@@ -110,5 +143,6 @@ export const useTourStore = defineStore('tour', () => {
     fetchShows,
     deleteTour,
     deleteShow,
+    createTour,
   };
 });

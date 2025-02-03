@@ -60,12 +60,11 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
-import { useAuthStore } from '@/stores/auth';
+import { useInventoryStore } from '@/stores/inventory';
 
-const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
+const inventoryStore = useInventoryStore();
 
 const name = ref('');
 const type = ref('hard');
@@ -76,59 +75,25 @@ const availableSizes = ref(['S', 'M', 'L', 'XL', 'XXL']);
 const sizesSelected = reactive({});
 const sizes = reactive({});
 
-const updateSizes = () => {
-  for (const size in sizes) {
-    if (!sizesSelected[size]) {
-      delete sizes[size];
-    }
-  }
-};
-
 const submitInventory = async () => {
-  updateSizes();
+  const updatedSizes = await inventoryStore.updateSizes(sizes, sizesSelected)
 
   const payload = {
     tour_id: route.query.tour_id,
     name: name.value.trim(),
     type: type.value,
-    sizes: type.value === 'soft' ? sizes : null,
+    sizes: type.value === 'soft' ? updatedSizes : null,
     quantity: type.value === 'hard' ? quantity.value : null,
     price: price.value,
   };
 
-  try {
-    const token = authStore.token;
+  const success = await inventoryStore.addInventoryItem(route.query.tour_id, payload);
 
-    // Fetch existing inventory
-    const existingInventoryResponse = await axios.get(
-      `http://localhost:5002/api/inventory?tour_id=${route.query.tour_id}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    // Check for a duplicate (name + type match)
-    const duplicateItem = existingInventoryResponse.data.find(
-      (item) =>
-        item.name.toLowerCase().trim() === payload.name.toLowerCase().trim() &&
-        item.type === payload.type
-    );
-
-    if (duplicateItem) {
-      alert(
-        `An item with name "${payload.name}" already exists in inventory. Please edit the name so that this is recorded as a new item. To edit already existing iventory, press the 'edit' button on the inventory card.`
-      );
-      return; // 🚨 PREVENT API CALL
-    }
-
-    // Proceed to create a new inventory item if no duplicate is found
-    await axios.post('http://localhost:5002/api/inventory', payload, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
+  if (success) {
     router.push(`/tours/${route.query.tour_id}/inventory`);
-  } catch (error) {
-    console.error('Error adding inventory:', error.response?.data || error);
   }
 };
+
 const cancelSubmit = () => {
   router.push(`/tours/${route.query.tour_id}/inventory`);
 };
