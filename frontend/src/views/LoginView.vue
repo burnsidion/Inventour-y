@@ -43,15 +43,12 @@
 </template>
 
 <script setup>
-import axios from 'axios';
-import { useAuthStore } from '@/stores/auth';
-import { useRouter } from 'vue-router';
 import { onMounted, ref } from 'vue';
+import { useAuthStore } from '@/stores/auth';
 
 import SkeletonLoader from '@/components/SkeletonLoader.vue';
 
 const authStore = useAuthStore();
-const router = useRouter();
 
 const email = ref('');
 const password = ref('');
@@ -61,25 +58,9 @@ const errorMessage = ref('');
 
 const submitLogin = async () => {
   try {
-    const response = await axios.post('http://localhost:5002/api/users/login', {
-      email: email.value,
-      password: password.value,
-    });
-
-    authStore.setUser(response.data.user, response.data.token);
-    router.push('/');
+    await authStore.loginUser({ email: email.value, password: password.value });
   } catch (error) {
-    console.log('Error logging in', error.response?.data || error.message);
-
-    const message = error.response?.data?.error || "Something went wrong. Please try again.";
-
-    if (error.response.data.message === 'Invalid password') {
-      errorMessage.value = error.response.data.message;
-    } else if (error.response?.status === 404) {
-      errorMessage.value = 'User not found. Please check your email.';
-    } else {
-      errorMessage.value = message;
-    }
+    errorMessage.value = error.message;
   }
 };
 

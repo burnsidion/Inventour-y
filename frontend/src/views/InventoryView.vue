@@ -163,15 +163,12 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useInventoryStore } from '@/stores/inventory';
-import axios from 'axios';
 import { storeToRefs } from 'pinia';
 
-import { useAuthStore } from '@/stores/auth';
 import { useTourStore } from '@/stores/tour';
 
 import EditInventoryForm from '@/components/EditInventoryForm.vue';
 
-const authStore = useAuthStore();
 const route = useRoute();
 const inventoryStore = useInventoryStore();
 const tourStore = useTourStore();
@@ -198,17 +195,8 @@ const toggleEditForm = (name, size = null) => {
 };
 
 const saveInventoryChanges = async (updatedData) => {
-  try {
-    const token = authStore.token;
-    await axios.put(`http://localhost:5002/api/inventory/${updatedData.id}`, updatedData, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    await fetchInventory();
-    editingItem.value = null;
-  } catch (error) {
-    console.error('Error updating inventory:', error.response?.data || error);
-  }
+  editingItem.value = null;
+  await inventoryStore.editInventoryItem(updatedData, route.params.id);
 };
 
 const closeEditForm = () => {

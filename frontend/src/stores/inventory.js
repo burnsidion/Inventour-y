@@ -8,6 +8,11 @@ export const useInventoryStore = defineStore('inventory', () => {
   const inventory = ref([]);
 
   const fetchInventory = async (tourId) => {
+    if (!tourId) {
+      console.error('❌ No tour ID provided to fetchInventory.');
+      return;
+    }
+
     try {
       const token = authStore.token;
       const response = await axios.get(`http://localhost:5002/api/inventory?tour_id=${tourId}`, {
@@ -81,11 +86,28 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
   };
 
+  const editInventoryItem = async (updatedData, tourId) => {
+    if (!tourId) {
+      console.log('No tour ID provided to editInventoryItem!!!');
+    }
+    try {
+      const token = authStore.token;
+      await axios.put(`http://localhost:5002/api/inventory/${updatedData.id}`, updatedData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      await fetchInventory(tourId);
+    } catch (error) {
+      console.error('Error updating inventory:', error.response?.data || error);
+    }
+  };
+
   return {
     inventory,
     fetchInventory,
     deleteItem,
     addInventoryItem,
     updateSizes,
+    editInventoryItem,
   };
 });

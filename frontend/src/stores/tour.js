@@ -12,6 +12,7 @@ export const useTourStore = defineStore('tour', () => {
   const tours = ref([]);
   const loading = ref(false);
   const errorMessage = ref('');
+  const showDetails = ref({ venue: '', date: '' });
 
   const createTour = async (tourData) => {
     loading.value = true;
@@ -96,14 +97,30 @@ export const useTourStore = defineStore('tour', () => {
     }
   };
 
+  const getShowDetails = async (showId) => {
+    try {
+      const token = authStore.token;
+      const response = await axios.get(`http://localhost:5002/api/shows/${showId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data) {
+        showDetails.value = response.data;
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching show details:', error.response?.data || error.message);
+      return null;
+    }
+  };
+
   const addShow = async (showData) => {
     try {
       const token = authStore.token;
-      const response = await axios.post(
-        'http://localhost:5002/api/shows',
-        showData,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const response = await axios.post('http://localhost:5002/api/shows', showData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const id = response.data.show.id;
       router.push(`/shows/${id}/?tour_id=${showData.tour_id}`);
     } catch (error) {
@@ -160,5 +177,6 @@ export const useTourStore = defineStore('tour', () => {
     deleteShow,
     createTour,
     addShow,
+    getShowDetails,
   };
 });
