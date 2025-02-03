@@ -7,7 +7,7 @@
       <h1 class="text-3xl font-bold mb-6 text-center">Your Tours</h1>
 
       <!-- Tours List -->
-      <div v-if="tours.length > 0" class="flex flex-col gap-4">
+      <div v-if="tours?.length > 0" class="flex flex-col gap-4">
         <div
           v-for="tour in tours"
           :key="tour.id"
@@ -67,56 +67,20 @@
 </template>
   
 <script setup>
-import { ref, onMounted } from 'vue';
-import SidebarMenu from '@/components/SidebarMenu.vue';
-import { useRouter } from 'vue-router';
 import axios from 'axios';
-import { useAuthStore } from '@/stores/auth';
+import { onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import { format } from 'date-fns';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { useTourStore } from '@/stores/tour';
+
+import SidebarMenu from '@/components/SidebarMenu.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
-const tours = ref([]);
-
-const fetchShows = async (tourId) => {
-  try {
-    const token = authStore.token;
-    const response = await axios.get(`http://localhost:5002/api/shows?tour_id=${tourId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    return response.data;
-  } catch (error) {
-    if (error.response?.status === 404) {
-      console.warn(`No shows found for tour ${tourId}.`);
-      return [];
-    } else {
-      console.error(
-        `Error fetching shows for tour ${tourId}:`,
-        error.response?.data || error.message
-      );
-      return [];
-    }
-  }
-};
-
-const fetchTours = async () => {
-  try {
-    const token = authStore.token;
-    const response = await axios.get('http://localhost:5002/api/tours', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    tours.value = await Promise.all(
-      response.data.map(async (tour) => ({
-        ...tour,
-        shows: await fetchShows(tour.id),
-      }))
-    );
-  } catch (error) {
-    console.error('Error fetching tours:', error.response?.data || error.message);
-  }
-};
+const tourStore = useTourStore();
+const { tours } = storeToRefs(tourStore);
 
 const createShow = (tourId) => {
   router.push(`/shows/create?tour_id=${tourId}`);
@@ -169,5 +133,7 @@ const createTour = () => {
   router.push('/create-tour');
 };
 
-onMounted(fetchTours);
+onMounted(async () => {
+  await tourStore.fetchTours();
+});
 </script>

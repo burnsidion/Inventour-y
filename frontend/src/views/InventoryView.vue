@@ -8,7 +8,7 @@
       @save="saveInventoryChanges"
     />
     <!-- Dynamic tour name -->
-    <h1 class="text-3xl font-bold my-6 text-center">Inventory for {{ tourName || 'Tour' }}</h1>
+    <h1 class="text-3xl font-bold my-6 text-center">Inventory for {{ tourStore.tourName || 'Tour' }}</h1>
 
     <div class="flex flex-col sm:flex-row gap-4 mb-4 justify-center sm:justify-center">
       <!-- Back to Home Page Button -->
@@ -159,38 +159,26 @@ import { useRoute } from 'vue-router';
 import { useInventoryStore } from '@/stores/inventory';
 import axios from 'axios';
 import { storeToRefs } from 'pinia';
+
 import { useAuthStore } from '@/stores/auth';
+import { useTourStore } from '@/stores/tour';
+
 import EditInventoryForm from '@/components/EditInventoryForm.vue';
 
 const authStore = useAuthStore();
 const route = useRoute();
 const inventoryStore = useInventoryStore();
+const tourStore = useTourStore();
 
 const { inventory } = storeToRefs(inventoryStore);
-const { fetchInventory } = inventoryStore;
+const { fetchInventory, deleteItem } = inventoryStore;
 
 const editingItem = ref(null);
 const softExpanded = ref(true);
 const hardExpanded = ref(true);
-const tourName = ref('');
 const modalOpen = ref(false);
 
 const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-
-const fetchTourDetails = async () => {
-  try {
-    const token = authStore.token;
-    const response = await axios.get(`http://localhost:5002/api/tours/${route.params.id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (response.data && response.data.name) {
-      tourName.value = response.data.name;
-    }
-  } catch (error) {
-    console.error('Error fetching tour details', error);
-  }
-};
 
 const toggleEditForm = (name, size = null) => {
   if (!name || typeof name !== 'string') return;
@@ -210,7 +198,7 @@ const saveInventoryChanges = async (updatedData) => {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    await inventoryStore.fetchInventory();
+    await fetchInventory();
     editingItem.value = null;
   } catch (error) {
     console.error('Error updating inventory:', error.response?.data || error);
@@ -230,22 +218,6 @@ const formattedPrice = (price) => {
 const getSoftItemPrice = (name) => {
   const item = inventory.value.find((i) => i.name === name && i.type === 'soft');
   return formattedPrice(item ? item.price : 'N/A');
-};
-
-const deleteItem = async (itemId) => {
-  if (!confirm('Are you sure you want to delete this item?')) return;
-
-  try {
-    const token = authStore.token;
-    await axios.delete(`http://localhost:5002/api/inventory/${itemId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    // Update inventory after deletion
-    inventory.value = inventory.value.filter((item) => item.id !== itemId);
-  } catch (error) {
-    console.error('Error deleting inventory item:', error);
-  }
 };
 
 const deleteItemBySize = (name, size) => {
@@ -288,7 +260,7 @@ const softItemsGrouped = computed(() => {
 });
 
 onMounted(async () => {
-  await Promise.all([fetchTourDetails(), fetchInventory(route.params.id)]);
+  await Promise.all([tourStore.fetchTourDetails(route.params.id), fetchInventory(route.params.id)]);
 });
 </script>
 

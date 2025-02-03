@@ -7,8 +7,6 @@ export const useInventoryStore = defineStore('inventory', () => {
   const authStore = useAuthStore();
   const inventory = ref([]);
 
-  console.log('Inventory from Pinia:', inventory);
-
   const fetchInventory = async (tourId) => {
     try {
       const token = authStore.token;
@@ -21,8 +19,24 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
   };
 
+  const deleteItem = async (itemId) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+
+    try {
+      const token = authStore.token;
+      await axios.delete(`http://localhost:5002/api/inventory/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      inventory.value = inventory.value.filter((item) => item.id !== itemId);
+    } catch (error) {
+      console.error('Error deleting inventory item:', error);
+    }
+  };
+
   return {
     inventory,
     fetchInventory,
+    deleteItem,
   };
 });
