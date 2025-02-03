@@ -8,7 +8,9 @@
       @save="saveInventoryChanges"
     />
     <!-- Dynamic tour name -->
-    <h1 class="text-3xl font-bold my-6 text-center">Inventory for {{ tourStore.tourName || 'Tour' }}</h1>
+    <h1 class="text-3xl font-bold my-6 text-center">
+      Inventory for {{ tourStore.tourName || 'Tour' }}
+    </h1>
 
     <div class="flex flex-col sm:flex-row gap-4 mb-4 justify-center sm:justify-center">
       <!-- Back to Home Page Button -->
@@ -75,7 +77,9 @@
             </div>
           </Transition>
         </div>
-        <p v-else class="text-gray-500 text-center">No hard items in inventory.</p>
+        <p v-else class="text-gray-500 text-center">
+          No hard items found in inventory. Click the "Add Inventory Item" button to add some merch!
+        </p>
       </div>
 
       <!-- Soft Items Section -->
@@ -147,7 +151,9 @@
             </div>
           </Transition>
         </div>
-        <p v-else class="text-gray-500 text-center">No soft items in inventory.</p>
+        <p v-else class="text-gray-500 text-center">
+          No soft items found in inventory. Click the "Add Inventory Item" button to add some merch!
+        </p>
       </div>
     </div>
   </div>

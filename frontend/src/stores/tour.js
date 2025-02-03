@@ -96,6 +96,21 @@ export const useTourStore = defineStore('tour', () => {
     }
   };
 
+  const addShow = async (showData) => {
+    try {
+      const token = authStore.token;
+      const response = await axios.post(
+        'http://localhost:5002/api/shows',
+        showData,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const id = response.data.show.id;
+      router.push(`/shows/${id}/?tour_id=${showData.tour_id}`);
+    } catch (error) {
+      console.error('Error creating show:', error.response?.data || error.message);
+    }
+  };
+
   const deleteShow = async (tourId, showId) => {
     if (!confirm('Are you sure you want to delete this show?')) return;
 
@@ -144,5 +159,6 @@ export const useTourStore = defineStore('tour', () => {
     deleteTour,
     deleteShow,
     createTour,
+    addShow,
   };
 });
