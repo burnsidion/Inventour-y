@@ -7,6 +7,7 @@ import ShowView from '@/views/ShowView.vue';
 import CreateShowView from '@/views/CreateShowView.vue';
 import InventoryView from '@/views/InventoryView.vue';
 import InventoryForm from '@/components/InventoryForm.vue';
+import ProfileView from '@/views/ProfileView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,6 +26,11 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
+    },
+    {
+      path: '/profile',
+      name: 'ProfileView',
+      component: ProfileView
     },
     {
       path: '/create-tour',

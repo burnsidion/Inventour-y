@@ -16,6 +16,23 @@ export const useAuthStore = defineStore('auth', () => {
     startInactivityTimer();
   };
 
+  const fetchUserData = async () => {
+    if (!token.value) return;
+
+    try {
+      const decodedToken = JSON.parse(atob(token.value.split('.')[1])); 
+      const userId = decodedToken.id;
+
+      const response = await axios.get(`http://localhost:5002/api/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token.value}` },
+      });
+
+      user.value = response.data;
+    } catch (error) {
+      console.error('Error fetching user data:', error.response?.data || error.message);
+    }
+  };
+
   const logout = () => {
     user.value = null;
     token.value = null;
@@ -99,5 +116,6 @@ export const useAuthStore = defineStore('auth', () => {
     clearInactivityTimer,
     signupUser,
     loginUser,
+    fetchUserData,
   };
 });
