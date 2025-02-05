@@ -244,29 +244,33 @@ router.post("/shows", authenticateToken, async (req, res) => {
   }
 });
 
-router.get("/shows", authenticateToken, async (req, res) => {
-  const { tour_id } = req.query;
-
-  if (!tour_id || isNaN(Number(tour_id))) {
-    return res
-      .status(400)
-      .json({ error: "Invalid or missing tour_id query parameter" });
-  }
-
+router.get("/inventory", authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT * FROM shows WHERE tour_id = $1 ORDER BY date ASC",
-      [Number(tour_id)]
-    );
+    const { id: userId } = req.user;
 
-    if (result.rows.length === 0) {
-      return res.status(200).json();
-    }
+    const result = await pool.query(
+      `SELECT 
+              inventory.id, 
+              inventory.name, 
+              inventory.type, 
+              inventory.price, 
+              inventory.image_url, 
+              inventory.created_at, 
+              inventory.tour_id,
+              json_agg(
+                  json_build_object('size', inventory_sizes.size, 'quantity', inventory_sizes.quantity)
+              ) AS sizes
+           FROM inventory
+           LEFT JOIN inventory_sizes ON inventory.id = inventory_sizes.inventory_id
+           WHERE inventory.tour_id IN (SELECT id FROM tours WHERE user_id = $1)
+           GROUP BY inventory.id;`,
+      [userId]
+    );
 
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error("Error fetching shows:", error);
-    res.status(500).json({ error: "Failed to fetch shows" });
+    console.error("Error fetching inventory:", error);
+    res.status(500).json({ error: "Failed to fetch inventory" });
   }
 });
 
@@ -324,90 +328,69 @@ router.delete("/shows/:id", authenticateToken, async (req, res) => {
 
 //Inventory routes
 router.post("/inventory", authenticateToken, async (req, res) => {
-  const { tour_id, name, type, sizes, quantity, price, image_url } = req.body;
+  const { name, type, price, image_url, tour_id, sizes } = req.body;
 
-  if (!tour_id || !name || !type || !price || (type === "hard" && !quantity)) {
-    return res.status(400).json({
-      error:
-        "Missing required fields: tour_id, name, type, quantity (if hard item), price",
-    });
+  if (!name || !type || !price || !tour_id) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  if (type === "soft" && (!Array.isArray(sizes) || sizes.length === 0)) {
+    return res
+      .status(400)
+      .json({ error: "Soft items require at least one size" });
   }
 
   try {
-    // Check for existing items with the same name and type
-    let existingItem;
-    if (type === "soft") {
-      existingItem = await pool.query(
-        "SELECT * FROM inventory WHERE tour_id = $1 AND name = $2 AND type = $3",
-        [tour_id, name, type]
-      );
-    } else {
-      existingItem = await pool.query(
-        "SELECT * FROM inventory WHERE tour_id = $1 AND name = $2 AND type = $3 AND size IS NULL",
-        [tour_id, name, type]
-      );
-    }
-
-    if (existingItem.rows.length > 0) {
-      return res
-        .status(400)
-        .json({ error: "Item with this name already exists in inventory" });
-    }
-
-    // Handle Soft Items
-    if (type === "soft" && sizes && Object.keys(sizes).length > 0) {
-      const inventoryItems = [];
-
-      for (const [size, qty] of Object.entries(sizes)) {
-        const result = await pool.query(
-          `INSERT INTO inventory (tour_id, name, type, size, quantity, price, image_url) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-          [tour_id, name, type, size, qty, price, image_url || null]
-        );
-        inventoryItems.push(result.rows[0]);
-      }
-
-      return res
-        .status(201)
-        .json({ message: "Soft inventory items added", items: inventoryItems });
-    }
-
-    // Handle Hard Items
-    const result = await pool.query(
-      `INSERT INTO inventory (tour_id, name, type, size, quantity, price, image_url) 
-       VALUES ($1, $2, $3, NULL, $4, $5, $6) RETURNING *`,
-      [tour_id, name, type, quantity, price, image_url || null]
+    const inventoryResult = await pool.query(
+      `INSERT INTO inventory (name, type, price, image_url, tour_id)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [name, type, price, image_url, tour_id]
     );
 
-    res
-      .status(201)
-      .json({ message: "Hard inventory item added", item: result.rows[0] });
+    const inventoryId = inventoryResult.rows[0].id;
+
+    if (type === "soft") {
+      const sizeInserts = sizes.map(({ size, quantity }) =>
+        pool.query(
+          `INSERT INTO inventory_sizes (inventory_id, size, quantity)
+           VALUES ($1, $2, $3)`,
+          [inventoryId, size, quantity]
+        )
+      );
+
+      await Promise.all(sizeInserts);
+    }
+
+    res.status(201).json({ message: "Inventory item added", inventoryId });
   } catch (error) {
-    console.error("Error adding inventory", error);
-    res.status(500).json({ error: "Failed to add inventory item" });
+    console.error("Error adding inventory:", error);
+    res.status(500).json({ error: "Failed to add inventory" });
   }
 });
 
 router.get("/inventory", authenticateToken, async (req, res) => {
-  const { tour_id } = req.query;
-
-  if (!tour_id || isNaN(Number(tour_id))) {
-    return res
-      .status(400)
-      .json({ error: "Invalid or missing tour_id query parameter" });
-  }
-
   try {
-    const result = await pool.query(
-      "SELECT * FROM inventory WHERE tour_id = $1 ORDER BY name ASC",
-      [Number(tour_id)]
+    const inventoryItems = await pool.query(`SELECT * FROM inventory`);
+
+    const inventoryWithSizes = await Promise.all(
+      inventoryItems.rows.map(async (item) => {
+        let sizes = [];
+        if (item.type === "soft") {
+          const sizeResults = await pool.query(
+            `SELECT size, quantity FROM inventory_sizes WHERE inventory_id = $1`,
+            [item.id]
+          );
+          sizes = sizeResults.rows;
+        }
+
+        return {
+          ...item,
+          sizes,
+        };
+      })
     );
 
-    if (result.rows.length === 0) {
-      return res.status(200).json([]);
-    }
-
-    res.status(200).json(result.rows);
+    res.status(200).json(inventoryWithSizes);
   } catch (error) {
     console.error("Error fetching inventory:", error);
     res.status(500).json({ error: "Failed to fetch inventory" });

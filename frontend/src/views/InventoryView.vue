@@ -110,7 +110,7 @@
                 <tbody>
                   <tr
                     v-for="sizeEntry in item.sizes"
-                    :key="sizeEntry.id"
+                    :key="sizeEntry.size"
                     class="border-b border-gray-500 hover:bg-gray-100 transition duration-200"
                   >
                     <td class="p-2">{{ sizeEntry.size }}</td>
@@ -179,7 +179,7 @@ const modalOpen = ref(false);
 const hardItemsList = ref([]);
 const softItemsList = ref([]);
 
-const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+const tourId = route.params.id;
 
 const toggleEditForm = (name, size = null) => {
   if (!name || typeof name !== 'string') return;
@@ -233,19 +233,25 @@ const softItemsGrouped = computed(() => {
   inventory.value.forEach((item) => {
     if (item.type === 'soft') {
       if (!grouped[item.name]) {
-        grouped[item.name] = [];
+        grouped[item.name] = {
+          name: item.name,
+          price: item.price,
+          sizes: [],
+        };
       }
-      grouped[item.name].push({
-        id: item.id,
-        size: item.size || 'One Size',
-        quantity: item.quantity,
-        price: item.price,
-      });
-    }
-  });
 
-  Object.keys(grouped).forEach((key) => {
-    grouped[key].sort((a, b) => sizeOrder.indexOf(a.size) - sizeOrder.indexOf(b.size));
+      if (item.sizes && item.sizes.length > 0) {
+        grouped[item.name].sizes = item.sizes.map((s) => ({
+          size: s.size,
+          quantity: s.quantity,
+        }));
+      } else {
+        grouped[item.name].sizes.push({
+          size: 'One Size',
+          quantity: 0,
+        });
+      }
+    }
   });
 
   return grouped;
@@ -253,14 +259,16 @@ const softItemsGrouped = computed(() => {
 
 watchEffect(() => {
   hardItemsList.value = [...hardItems.value];
-  softItemsList.value = Object.entries(softItemsGrouped.value).map(([name, sizes]) => ({
-    name,
-    sizes: [...sizes],
+
+  softItemsList.value = Object.values(softItemsGrouped.value).map((item) => ({
+    name: item.name,
+    price: item.price,
+    sizes: [...item.sizes],
   }));
 });
 
 onMounted(async () => {
-  await Promise.all([tourStore.fetchTourDetails(route.params.id), fetchInventory(route.params.id)]);
+  await Promise.all([tourStore.fetchTourDetails(route.params.id), fetchInventory(tourId)]);
 });
 </script>
 
