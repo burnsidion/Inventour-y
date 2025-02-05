@@ -6,6 +6,9 @@
 
     <nav class="space-y-2">
       <RouterLink to="/" class="block px-4 py-2 hover:bg-gray-700 rounded">🏠 Home</RouterLink>
+      <RouterLink to="/profile" class="block p-2 rounded hover:bg-gray-200">
+        👤 Profile
+      </RouterLink>
       <RouterLink to="/inventory" class="block px-4 py-2 hover:bg-gray-700 rounded"
         >📦 Inventory</RouterLink
       >
