@@ -41,13 +41,12 @@
   
 <script setup>
 import { ref, watch } from 'vue';
-
 const props = defineProps({
   inventoryItem: {
     type: Object,
     required: true,
   },
-  modalOpen: {  
+  modalOpen: {
     type: Boolean,
     required: true,
   },
@@ -55,20 +54,27 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'save']);
 
-const updatedPrice = ref(props.inventoryItem.price);
-const addedQuantity = ref(0);
+const updatedItem = ref({});
+const updatedPrice = ref('');
 const updatedSizes = ref([]);
+const addedQuantity = ref([]);
 
 watch(
   () => props.inventoryItem,
   (newVal) => {
-    if (newVal.type === 'soft' && newVal.size) {
-      updatedSizes.value = [
-        {
-          size: newVal.size,
-          newStock: 0, 
-        },
-      ];
+    if (!newVal || !newVal.name) {
+      return;
+    }
+
+    updatedItem.value = { ...newVal };
+    updatedPrice.value = newVal.price || '';
+
+    if (newVal.type === 'soft' && Array.isArray(newVal.sizes)) {
+      updatedSizes.value = newVal.sizes.map((sizeObj) => ({
+        size: sizeObj.size,
+        newStock: sizeObj.quantity,
+      }));
+      addedQuantity.value = new Array(newVal.sizes.length).fill(0);
     }
   },
   { immediate: true }
@@ -77,11 +83,12 @@ watch(
 const updateInventory = () => {
   const updatedData = {
     id: props.inventoryItem.id,
-    price: updatedPrice.value, 
-    new_quantity:
-      props.inventoryItem.type === 'soft'
-        ? updatedSizes.value[0]?.newStock || 0 
-        : addedQuantity.value || 0,
+    name: updatedItem.value.name,
+    price: updatedPrice.value,
+    sizes: updatedSizes.value.map((sizeObj, index) => ({
+      size: sizeObj.size,
+      new_quantity: sizeObj.newStock + (addedQuantity.value[index] || 0),
+    })),
   };
 
   emit('save', updatedData);
