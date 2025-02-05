@@ -1,7 +1,7 @@
 <template>
   <div class="p-6">
     <EditInventoryForm
-      v-if="editingItem"
+      v-if="modalOpen"
       :inventory-item="editingItem"
       :modal-open="modalOpen"
       @close="closeEditForm"
@@ -99,6 +99,12 @@
             >
               <h3 class="font-semibold">{{ item.name }}</h3>
               <p class="text-gray-600 mb-2">Price: ${{ getSoftItemPrice(item.name) }}</p>
+              <button
+                @click="toggleEditForm(item)"
+                class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
+              >
+                📝 Edit Item
+              </button>
               <table class="w-full border-collapse">
                 <thead>
                   <tr class="border-b border-gray-500">
@@ -131,12 +137,6 @@
                           class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
                         >
                           🗑 Delete
-                        </button>
-                        <button
-                          @click="toggleEditForm(item.name, sizeEntry.size)"
-                          class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
-                        >
-                          📝 Edit Item
                         </button>
                       </div>
                     </td>
@@ -181,17 +181,17 @@ const softItemsList = ref([]);
 
 const tourId = route.params.id;
 
-const toggleEditForm = (name, size = null) => {
-  if (!name || typeof name !== 'string') return;
-  const selectedItem = inventory.value.find(
-    (item) => item.name.trim() === name.trim() && (size ? item.size === size : item.size === null)
-  );
+const toggleEditForm = (item) => {
+  const selectedItem = inventory.value.find((inventoryItem) => inventoryItem.name === item.name);
 
-  if (!selectedItem) return;
-  editingItem.value = { ...selectedItem };
+  if (!selectedItem) {
+    console.error('No item found for:', item);
+    return;
+  }
+
+  editingItem.value = { ...selectedItem, sizes: [...selectedItem.sizes] };
   modalOpen.value = true;
 };
-
 const saveInventoryChanges = async (updatedData) => {
   editingItem.value = null;
   await inventoryStore.editInventoryItem(updatedData, route.params.id);
