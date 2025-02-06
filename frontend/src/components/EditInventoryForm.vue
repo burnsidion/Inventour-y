@@ -76,6 +76,10 @@ watch(
       }));
       addedQuantity.value = new Array(newVal.sizes.length).fill(0);
     }
+
+    if (newVal.type === 'hard') {
+      addedQuantity.value = 0;
+    }
   },
   { immediate: true }
 );
@@ -85,11 +89,20 @@ const updateInventory = () => {
     id: props.inventoryItem.id,
     name: updatedItem.value.name,
     price: updatedPrice.value,
-    sizes: updatedSizes.value.map((sizeObj, index) => ({
+  };
+
+  if (props.inventoryItem.type === 'soft') {
+    updatedData.sizes = updatedSizes.value.map((sizeObj, index) => ({
       size: sizeObj.size,
       new_quantity: sizeObj.newStock + (addedQuantity.value[index] || 0),
-    })),
-  };
+    }));
+    console.log('Updated Soft Item:', updatedData);
+  }
+
+  if (props.inventoryItem.type === 'hard') {
+    updatedData.quantity = (props.inventoryItem.quantity || 0) + addedQuantity.value;
+    console.log('Updated Hard Item:', updatedData);
+  }
 
   emit('save', updatedData);
 };
