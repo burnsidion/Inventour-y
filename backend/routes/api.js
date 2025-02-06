@@ -463,31 +463,62 @@ router.post("/inventory/update", authenticateToken, async (req, res) => {
 
 router.put("/inventory/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { price, new_quantity } = req.body;
-
-  if (!id || (price === undefined && new_quantity === undefined)) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
+  const { name, type, price, image_url, quantity, sizes } = req.body;
 
   try {
-    const result = await pool.query(
-      `UPDATE inventory 
-       SET price = COALESCE($1, price), 
-           quantity = COALESCE(quantity, 0) + COALESCE($2, 0) 
-       WHERE id = $3 
-       RETURNING *`,
-      [price, new_quantity, id]
-    );
+    // Fetch item to determine if it's 'soft' or 'hard'
+    const itemResult = await pool.query("SELECT type FROM inventory WHERE id = $1", [id]);
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Inventory item not found" });
+    if (itemResult.rows.length === 0) {
+      return res.status(404).json({ error: "Item not found" });
     }
 
-    res.status(200).json({
-      message: "Inventory updated successfully",
-      item: result.rows[0],
-    });
+    const itemType = itemResult.rows[0].type;
+
+    // Start transaction
+    await pool.query("BEGIN");
+
+    // Update the inventory table (applies to both hard and soft items)
+    await pool.query(
+      `UPDATE inventory SET name = $1, price = $2, image_url = $3 WHERE id = $4`,
+      [name, price, image_url, id]
+    );
+
+    if (itemType === "hard") {
+      // Update quantity in inventory table
+      await pool.query(`UPDATE inventory SET quantity = $1 WHERE id = $2`, [quantity, id]);
+    } else if (itemType === "soft" && sizes) {
+      // Update each size in inventory_sizes table
+      for (const size of sizes) {
+        await pool.query(
+          `UPDATE inventory_sizes SET quantity = $1 WHERE inventory_id = $2 AND size = $3`,
+          [size.quantity, id, size.size]
+        );
+      }
+    }
+
+    // Commit transaction
+    await pool.query("COMMIT");
+
+    // Fetch updated item for response
+    const updatedItemResult = await pool.query(
+      `SELECT id, name, type, price, image_url, tour_id, quantity FROM inventory WHERE id = $1`,
+      [id]
+    );
+
+    const updatedItem = updatedItemResult.rows[0];
+
+    if (itemType === "soft") {
+      const sizesResult = await pool.query(
+        `SELECT size, quantity FROM inventory_sizes WHERE inventory_id = $1`,
+        [id]
+      );
+      updatedItem.sizes = sizesResult.rows;
+    }
+
+    res.json({ message: "Inventory item updated", inventory: updatedItem });
   } catch (error) {
+    await pool.query("ROLLBACK");
     console.error("Error updating inventory:", error);
     res.status(500).json({ error: "Failed to update inventory" });
   }
