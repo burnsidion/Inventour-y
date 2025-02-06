@@ -495,21 +495,45 @@ router.put("/inventory/:id", authenticateToken, async (req, res) => {
 
 router.delete("/inventory/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
-
   try {
-    const result = await pool.query(
+    await pool.query("BEGIN");
+
+    const itemResult = await pool.query(
+      "SELECT type FROM inventory WHERE id = $1",
+      [id]
+    );
+
+    if (itemResult.rows.length === 0) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+
+    const itemType = itemResult.rows[0].type;
+
+    if (itemType === "soft") {
+      await pool.query("DELETE FROM inventory_sizes WHERE inventory_id = $1", [
+        id,
+      ]);
+    }
+
+    const deleteResult = await pool.query(
       "DELETE FROM inventory WHERE id = $1 RETURNING *",
       [id]
     );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: "Inventory item not found" });
+    if (deleteResult.rows.length === 0) {
+      throw new Error("Failed to delete inventory item");
     }
 
-    res.status(200).json({ message: "Item deleted successfully" });
+    await pool.query("COMMIT");
+
+    res.status(200).json({
+      message: "Item deleted successfully",
+      deletedItem: deleteResult.rows[0],
+    });
   } catch (error) {
-    console.error("Error deleting inventory:", error);
-    res.status(500).json({ message: "Failed to delete inventory item" });
+    await pool.query("ROLLBACK");
+    console.error("Error deleting item", error);
+    res.status(500).json({ error: "Failed to delete item" });
   }
 });
 

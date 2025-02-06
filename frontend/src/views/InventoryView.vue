@@ -97,18 +97,25 @@
               >
                 <h3 class="font-semibold">{{ item.name }}</h3>
                 <p class="text-gray-600 mb-2">Price: ${{ getSoftItemPrice(item.name) }}</p>
-                <button
-                  @click="toggleEditForm(item)"
-                  class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
-                >
-                  📝 Edit Item
-                </button>
+                <div class="flex justify-between">
+                  <button
+                    @click="toggleEditForm(item)"
+                    class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
+                  >
+                    📝 Edit Item
+                  </button>
+                  <button
+                    @click="deleteItem(item.id)"
+                    class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
+                  >
+                    🗑 Delete Item
+                  </button>
+                </div>
                 <table class="w-full border-collapse">
                   <thead>
                     <tr class="border-b border-gray-500">
                       <th class="text-left p-2">Size</th>
                       <th class="p-2">Quantity</th>
-                      <th class="text-center p-2">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -127,16 +134,6 @@
                             ? `${sizeEntry.quantity} LOW STOCK!!!`
                             : sizeEntry.quantity
                         }}
-                      </td>
-                      <td class="p-2 text-right">
-                        <div class="flex flex-col lg:flex-row gap-2 justify-end">
-                          <button
-                            @click="deleteItemBySize(item.name, sizeEntry.size)"
-                            class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
-                          >
-                            🗑 Delete
-                          </button>
-                        </div>
                       </td>
                     </tr>
                   </tbody>
@@ -169,7 +166,7 @@ const inventoryStore = useInventoryStore();
 const tourStore = useTourStore();
 
 const { inventory } = storeToRefs(inventoryStore);
-const { fetchInventory, deleteItem } = inventoryStore;
+const { fetchInventory, deleteInventoryItem } = inventoryStore;
 
 const editingItem = ref(null);
 const softExpanded = ref(true);
@@ -211,15 +208,19 @@ const getSoftItemPrice = (name) => {
   return formattedPrice(item ? item.price : 'N/A');
 };
 
-const deleteItemBySize = (name, size) => {
-  const itemToDelete = inventory.value.find((item) => item.name === name && item.size === size);
-
-  if (!itemToDelete) {
-    console.error('Item not found.');
+const deleteItem = async (itemId) => {
+  if (!itemId) {
+    console.error('❌ Item ID is undefined. Cannot proceed with deletion.');
     return;
   }
+  const confirmed = confirm('Are you sure you want to delete this item?');
+  if (!confirmed) return;
 
-  deleteItem(itemToDelete.id);
+  const success = await deleteInventoryItem(itemId);
+
+  if (!success) {
+    alert('Failed to delete item, please try again');
+  }
 };
 
 const hardItems = computed(() => {
@@ -265,6 +266,7 @@ watchEffect(() => {
   hardItemsList.value = [...hardItems.value];
 
   softItemsList.value = Object.values(softItemsGrouped.value).map((item) => ({
+    id: inventory.value.find(i => i.name === item.name)?.id,
     name: item.name,
     price: item.price,
     sizes: [...item.sizes],
