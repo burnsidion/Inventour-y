@@ -244,35 +244,36 @@ router.post("/shows", authenticateToken, async (req, res) => {
   }
 });
 
-router.get("/inventory", authenticateToken, async (req, res) => {
-  try {
-    const { id: userId } = req.user;
+// router.get("/inventory", authenticateToken, async (req, res) => {
+//   try {
+//     console.log("this route called in the show routes");
+//     const { id: userId } = req.user;
 
-    const result = await pool.query(
-      `SELECT 
-              inventory.id, 
-              inventory.name, 
-              inventory.type, 
-              inventory.price, 
-              inventory.image_url, 
-              inventory.created_at, 
-              inventory.tour_id,
-              json_agg(
-                  json_build_object('size', inventory_sizes.size, 'quantity', inventory_sizes.quantity)
-              ) AS sizes
-           FROM inventory
-           LEFT JOIN inventory_sizes ON inventory.id = inventory_sizes.inventory_id
-           WHERE inventory.tour_id IN (SELECT id FROM tours WHERE user_id = $1)
-           GROUP BY inventory.id;`,
-      [userId]
-    );
+//     const result = await pool.query(
+//       `SELECT
+//               inventory.id,
+//               inventory.name,
+//               inventory.type,
+//               inventory.price,
+//               inventory.image_url,
+//               inventory.created_at,
+//               inventory.tour_id,
+//               json_agg(
+//                   json_build_object('size', inventory_sizes.size, 'quantity', inventory_sizes.quantity)
+//               ) AS sizes
+//            FROM inventory
+//            LEFT JOIN inventory_sizes ON inventory.id = inventory_sizes.inventory_id
+//            WHERE inventory.tour_id IN (SELECT id FROM tours WHERE user_id = $1)
+//            GROUP BY inventory.id;`,
+//       [userId]
+//     );
 
-    res.status(200).json(result.rows);
-  } catch (error) {
-    console.error("Error fetching inventory:", error);
-    res.status(500).json({ error: "Failed to fetch inventory" });
-  }
-});
+//     res.status(200).json(result.rows);
+//   } catch (error) {
+//     console.error("Error fetching inventory:", error);
+//     res.status(500).json({ error: "Failed to fetch inventory" });
+//   }
+// });
 
 router.get("/shows/:id", authenticateToken, async (req, res) => {
   const showId = req.params.id;
@@ -328,7 +329,7 @@ router.delete("/shows/:id", authenticateToken, async (req, res) => {
 
 //Inventory routes
 router.post("/inventory", authenticateToken, async (req, res) => {
-  const { name, type, price, image_url, tour_id, sizes } = req.body;
+  const { name, type, price, image_url, tour_id, sizes, quantity } = req.body;
 
   if (!name || !type || !price || !tour_id) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -341,27 +342,34 @@ router.post("/inventory", authenticateToken, async (req, res) => {
   }
 
   try {
+    // If hard item, store quantity in inventory table directly
     const inventoryResult = await pool.query(
-      `INSERT INTO inventory (name, type, price, image_url, tour_id)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [name, type, price, image_url, tour_id]
+      `INSERT INTO inventory (name, type, price, image_url, tour_id, quantity)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [name, type, price, image_url, tour_id, type === "hard" ? quantity : null]
     );
 
-    const inventoryId = inventoryResult.rows[0].id;
+    const inventoryItem = inventoryResult.rows[0];
+    let responsePayload = { ...inventoryItem, sizes: [] };
 
     if (type === "soft") {
       const sizeInserts = sizes.map(({ size, quantity }) =>
         pool.query(
           `INSERT INTO inventory_sizes (inventory_id, size, quantity)
            VALUES ($1, $2, $3)`,
-          [inventoryId, size, quantity]
+          [inventoryItem.id, size, quantity]
         )
       );
 
       await Promise.all(sizeInserts);
+
+      responsePayload.sizes = sizes;
     }
 
-    res.status(201).json({ message: "Inventory item added", inventoryId });
+    res.status(201).json({
+      message: "Inventory item added",
+      inventory: responsePayload,
+    });
   } catch (error) {
     console.error("Error adding inventory:", error);
     res.status(500).json({ error: "Failed to add inventory" });
@@ -370,27 +378,51 @@ router.post("/inventory", authenticateToken, async (req, res) => {
 
 router.get("/inventory", authenticateToken, async (req, res) => {
   try {
-    const inventoryItems = await pool.query(`SELECT * FROM inventory`);
+    const { tour_id } = req.query;
+    if (!tour_id) {
+      return res.status(400).json({ error: "Missing required tour_id" });
+    }
 
-    const inventoryWithSizes = await Promise.all(
-      inventoryItems.rows.map(async (item) => {
-        let sizes = [];
+    const inventoryResult = await pool.query(
+      `SELECT 
+              id, 
+              name, 
+              type, 
+              price, 
+              image_url, 
+              created_at, 
+              tour_id,
+              quantity
+       FROM inventory
+       WHERE tour_id = $1`,
+      [tour_id]
+    );
+
+    const inventoryItems = inventoryResult.rows;
+
+    const formattedInventory = await Promise.all(
+      inventoryItems.map(async (item) => {
         if (item.type === "soft") {
-          const sizeResults = await pool.query(
+          const sizesResult = await pool.query(
             `SELECT size, quantity FROM inventory_sizes WHERE inventory_id = $1`,
             [item.id]
           );
-          sizes = sizeResults.rows;
-        }
 
-        return {
-          ...item,
-          sizes,
-        };
+          return {
+            ...item,
+            sizes: sizesResult.rows, // Correctly return sizes for soft items
+          };
+        } else {
+          // Ensure hard items return `quantity` at the top level
+          return {
+            ...item,
+            quantity: item.quantity, // Keep quantity here
+          };
+        }
       })
     );
 
-    res.status(200).json(inventoryWithSizes);
+    res.json(formattedInventory);
   } catch (error) {
     console.error("Error fetching inventory:", error);
     res.status(500).json({ error: "Failed to fetch inventory" });

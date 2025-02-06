@@ -34,43 +34,45 @@
           </button>
         </div>
 
-        <draggable
-          v-if="hardItemsList.length > 0"
-          v-model="hardItemsList"
-          item-key="id"
-          class="grid gap-4"
-        >
-          <template #item="{ element: item }">
-            <div
-              :key="item.id"
-              class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce cursor-move text-[#393f4d]"
-            >
-              <h3 class="font-semibold">{{ item.name }}</h3>
-              <table class="w-full border-collapse">
-                <thead>
-                  <tr class="border-b border-gray-500">
-                    <th class="text-left p-2">Quantity</th>
-                    <th class="text-right p-2">Price</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="border-b border-gray-500">
-                    <td class="p-2">{{ item.quantity }}</td>
-                    <td class="p-2 text-right">${{ formattedPrice(item.price) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <div class="flex justify-center mt-2 gap-2">
-                <button @click="deleteItem(item.id)" class="btn btn-error text-white">
-                  🗑 Delete Item
-                </button>
-                <button @click="toggleEditForm(item.name)" class="btn btn-error text-white">
-                  📝 Edit Item
-                </button>
+        <template v-if="hardItemsList.length > 0">
+          <draggable v-if="hardExpanded" v-model="hardItemsList" item-key="id" class="grid gap-4">
+            <template #item="{ element: item }">
+              <div
+                :key="item.id"
+                class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce cursor-move text-[#393f4d]"
+              >
+                <h3 class="font-semibold">{{ item.name }}</h3>
+                <table class="w-full border-collapse">
+                  <thead>
+                    <tr class="border-b border-gray-500">
+                      <th class="text-left p-2">Quantity</th>
+                      <th class="text-right p-2">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="border-b border-gray-500">
+                      <td
+                        class="p-2"
+                        :class="item.quantity < 30 ? 'text-red-600 animate-pulse' : ''"
+                      >
+                        {{ item.quantity < 30 ? `${item.quantity} LOW STOCK` : item.quantity }}
+                      </td>
+                      <td class="p-2 text-right">${{ formattedPrice(item.price) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="flex justify-center mt-2 gap-2">
+                  <button @click="deleteItem(item.id)" class="btn btn-error text-white">
+                    🗑 Delete Item
+                  </button>
+                  <button @click="toggleEditForm(item.name)" class="btn btn-error text-white">
+                    📝 Edit Item
+                  </button>
+                </div>
               </div>
-            </div>
-          </template>
-        </draggable>
+            </template>
+          </draggable>
+        </template>
         <p v-else class="text-gray-500 text-center">
           No hard items found in inventory. Click the "Add Inventory Item" button to add some merch!
         </p>
@@ -87,65 +89,62 @@
           </button>
         </div>
 
-        <draggable
-          v-if="softItemsList.length > 0"
-          v-model="softItemsList"
-          item-key="name"
-          class="grid gap-4"
-        >
-          <template #item="{ element: item }">
-            <div
-              class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce cursor-move text-[#393f4d]"
-            >
-              <h3 class="font-semibold">{{ item.name }}</h3>
-              <p class="text-gray-600 mb-2">Price: ${{ getSoftItemPrice(item.name) }}</p>
-              <button
-                @click="toggleEditForm(item)"
-                class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
+        <template v-if="softItemsList.length > 0">
+          <draggable v-if="softExpanded" v-model="softItemsList" item-key="name" class="grid gap-4">
+            <template #item="{ element: item }">
+              <div
+                class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce cursor-move text-[#393f4d]"
               >
-                📝 Edit Item
-              </button>
-              <table class="w-full border-collapse">
-                <thead>
-                  <tr class="border-b border-gray-500">
-                    <th class="text-left p-2">Size</th>
-                    <th class="p-2">Quantity</th>
-                    <th class="text-center p-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="sizeEntry in item.sizes"
-                    :key="sizeEntry.size"
-                    class="border-b border-gray-500 hover:bg-gray-100 transition duration-200"
-                  >
-                    <td class="p-2">{{ sizeEntry.size }}</td>
-                    <td
-                      class="p-2 text-center"
-                      :class="sizeEntry.quantity < 30 ? 'text-red-600 animate-pulse' : ''"
+                <h3 class="font-semibold">{{ item.name }}</h3>
+                <p class="text-gray-600 mb-2">Price: ${{ getSoftItemPrice(item.name) }}</p>
+                <button
+                  @click="toggleEditForm(item)"
+                  class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
+                >
+                  📝 Edit Item
+                </button>
+                <table class="w-full border-collapse">
+                  <thead>
+                    <tr class="border-b border-gray-500">
+                      <th class="text-left p-2">Size</th>
+                      <th class="p-2">Quantity</th>
+                      <th class="text-center p-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="sizeEntry in item.sizes"
+                      :key="sizeEntry.size"
+                      class="border-b border-gray-500 hover:bg-gray-100 transition duration-200"
                     >
-                      {{
-                        sizeEntry.quantity < 30
-                          ? `${sizeEntry.quantity} LOW STOCK!!!`
-                          : sizeEntry.quantity
-                      }}
-                    </td>
-                    <td class="p-2 text-right">
-                      <div class="flex flex-col lg:flex-row gap-2 justify-end">
-                        <button
-                          @click="deleteItemBySize(item.name, sizeEntry.size)"
-                          class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
-                        >
-                          🗑 Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </template>
-        </draggable>
+                      <td class="p-2">{{ sizeEntry.size }}</td>
+                      <td
+                        class="p-2 text-center"
+                        :class="sizeEntry.quantity < 30 ? 'text-red-600 animate-pulse' : ''"
+                      >
+                        {{
+                          sizeEntry.quantity < 30
+                            ? `${sizeEntry.quantity} LOW STOCK!!!`
+                            : sizeEntry.quantity
+                        }}
+                      </td>
+                      <td class="p-2 text-right">
+                        <div class="flex flex-col lg:flex-row gap-2 justify-end">
+                          <button
+                            @click="deleteItemBySize(item.name, sizeEntry.size)"
+                            class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
+                          >
+                            🗑 Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+          </draggable>
+        </template>
         <p v-else class="text-gray-500 text-center">
           No soft items found in inventory. Click the "Add Inventory Item" button to add some merch!
         </p>
@@ -224,7 +223,12 @@ const deleteItemBySize = (name, size) => {
 };
 
 const hardItems = computed(() => {
-  return inventory.value.filter((item) => item.type === 'hard');
+  return inventory.value
+    .filter((item) => item.type === 'hard')
+    .map((item) => ({
+      ...item,
+      quantity: item.quantity || 0,
+    }));
 });
 
 const softItemsGrouped = computed(() => {
