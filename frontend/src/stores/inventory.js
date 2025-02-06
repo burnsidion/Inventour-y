@@ -21,7 +21,8 @@ export const useInventoryStore = defineStore('inventory', () => {
         type: item.type,
         price: item.price,
         image_url: item.image_url,
-        sizes: item.sizes || [],
+        quantity: item.type === 'hard' ? item.quantity || 0 : null,
+        sizes: item.type === 'soft' ? item.sizes || [] : [],
       }));
     } catch (error) {
       console.error('❌ Error fetching inventory:', error.response?.data || error);
@@ -33,16 +34,24 @@ export const useInventoryStore = defineStore('inventory', () => {
       const authStore = useAuthStore();
       const token = authStore.token;
 
+      if (newItem.type === 'soft' && newItem.sizes) {
+        newItem.sizes = Object.entries(newItem.sizes).map(([size, quantity]) => ({
+          size,
+          quantity,
+        }));
+      }
+
       const response = await axios.post('http://localhost:5002/api/inventory', newItem, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       inventory.value.push({
-        ...response.data,
-        sizes: response.data.sizes || [],
+        ...response.data.inventory,
+        sizes: response.data.inventory.sizes || [],
+        quantity: response.data.inventory.quantity || 0,
       });
 
-      return response.data;
+      return response.data.inventory;
     } catch (error) {
       console.error('❌ Error adding inventory:', error.response?.data || error);
     }
