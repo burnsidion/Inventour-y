@@ -82,10 +82,29 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
   };
 
+  const deleteInventoryItem = async (itemId) => {
+    try {
+      const authStore = useAuthStore();
+      const token = authStore.token;
+
+      await axios.delete(`http://localhost:5002/api/inventory/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      inventory.value = inventory.value.filter((item) => item.id !== itemId);
+
+      return true;
+    } catch (error) {
+      console.error('❌ Error deleting inventory item:', error.response?.data || error);
+      return false;
+    }
+  };
+
   return {
     inventory,
     fetchInventory,
     addInventoryItem,
     updateInventoryItem,
+    deleteInventoryItem
   };
 });

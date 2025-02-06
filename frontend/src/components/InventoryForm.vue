@@ -80,12 +80,10 @@ const submitInventory = async () => {
     tour_id: route.query.tour_id,
     name: name.value.trim(),
     type: type.value,
-    sizes: type.value === 'soft' ? sizes : null, // Only add sizes for soft items
-    quantity: type.value === 'hard' ? quantity.value : null, // Only add quantity for hard items
+    sizes: type.value === 'soft' ? sizes : null,
+    quantity: type.value === 'hard' ? quantity.value : null,
     price: price.value,
   };
-
-  console.log('Submitting payload:', payload);
 
   const success = await inventoryStore.addInventoryItem(payload);
 
