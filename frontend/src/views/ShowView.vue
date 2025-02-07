@@ -143,8 +143,8 @@
               <div v-if="!collapsedRows[itemName]" class="flex flex-col gap-2 items-center w-full">
                 <input
                   v-for="size in sizes"
-                  :key="size.id"
-                  v-model.number="sales[size.id]"
+                  :key="`${itemName}-${size.size}`"
+                  v-model.number="sales[`${size.id}-${size.size}`]"
                   type="number"
                   class="border rounded py-1 px-3 w-[80px] text-center text-sm min-h-[40px]"
                   min="0"
@@ -203,7 +203,6 @@ import { useInventoryStore } from '@/stores/inventory';
 import { useRoute } from 'vue-router';
 import { format } from 'date-fns';
 
-
 const salesStore = useSalesStore();
 const tourStore = useTourStore();
 const inventoryStore = useInventoryStore();
@@ -234,7 +233,11 @@ onMounted(async () => {
   if (!tourId) {
     console.error('🚨 No tourId found in query params');
   } else {
-    await Promise.all([inventoryStore.fetchInventory(tourId), salesStore.fetchSales(showId), fetchShowDetails()]);
+    await Promise.all([
+      inventoryStore.fetchInventory(tourId),
+      salesStore.fetchSales(showId),
+      fetchShowDetails(),
+    ]);
   }
 });
 
@@ -257,12 +260,18 @@ const groupedSoftItems = computed(() => {
     if (!grouped[item.name]) {
       grouped[item.name] = [];
     }
-    grouped[item.name].push({
-      id: item.id,
-      size: item.size,
-      quantity: item.quantity,
-      price: item.price,
-    });
+
+    if (Array.isArray(item.sizes)) {
+      item.sizes.forEach((sizeObj) => {
+        grouped[item.name].push({
+          id: `${item.id}-${sizeObj.size}`,
+          name: item.name,
+          size: sizeObj.size,
+          quantity: sizeObj.quantity,
+          price: item.price,
+        });
+      });
+    }
   });
 
   Object.keys(grouped).forEach((key) => {
@@ -273,6 +282,7 @@ const groupedSoftItems = computed(() => {
 });
 
 const subtotal = computed(() => {
+  console.log(inventory.value);
   return filteredSales.value
     .reduce((sum, sale) => {
       const item = [...hardItems.value, ...softItems.value].find(
@@ -296,23 +306,55 @@ const formattedPrice = (price) => {
 
 const fetchShowDetails = async () => {
   const details = await tourStore.getShowDetails(showId);
-  if(details) {
-    showVenue.value = details.venue,
-    showDate.value = details.showDate
+  if (details) {
+    (showVenue.value = details.venue), (showDate.value = details.showDate);
   }
 };
 
 const getItemName = (id) => {
-  const item = [...hardItems.value, ...softItems.value].find((i) => Number(i.id) === Number(id));
-  if (!item) return 'Unknown';
-  return item.type === 'soft' ? `${item.name} (${item.size})` : item.name;
+  console.log('🔍 Looking for item with ID:', id);
+
+  const [itemId, size] = id.split('-');
+
+  const item = [...hardItems.value, ...softItems.value].find(
+    (i) => Number(i.id) === Number(itemId)
+  );
+
+  if (!item) {
+    console.warn('⚠️ Item not found for ID:', id);
+    return 'Unknown';
+  }
+
+  if (item.type === 'soft' && size) {
+    const sizeEntry = item.sizes.find((s) => s.size === size);
+    if (sizeEntry) {
+      return `${item.name} (${sizeEntry.size})`;
+    }
+  }
+
+  return item.name;
 };
 
 const getItemTotal = (id) => {
-  const item = [...hardItems.value, ...softItems.value].find(
-    (item) => Number(item.id) === Number(id)
-  );
-  return item && sales.value[id] ? (sales.value[id] * item.price).toFixed(2) : '0.00';
+  console.log('🔍 Looking for price of item ID:', id);
+
+  const [itemId, size] = id.split('-');
+
+  const item = [...hardItems.value, ...softItems.value].find((i) => Number(i.id) === Number(itemId));
+
+  if (!item) {
+    console.warn('⚠️ Item not found for ID:', id);
+    return '0.00';
+  }
+
+  if (item.type === 'soft' && size) {
+    const sizeEntry = item.sizes.find((s) => s.size === size);
+    if (sizeEntry) {
+      return sales.value[id] ? (sales.value[id] * item.price).toFixed(2) : '0.00';
+    }
+  }
+
+  return sales.value[id] ? (sales.value[id] * item.price).toFixed(2) : '0.00';
 };
 
 const submitSale = async () => {

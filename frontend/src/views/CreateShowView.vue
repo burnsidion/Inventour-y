@@ -58,13 +58,15 @@ onMounted(() => {
 });
 
 const submitShow = async () => {
-  await tourStore.addShow({
+  const payload = {
     tour_id: tourId.value,
-    vanue: venue.value,
+    venue: venue.value,
     city: city.value,
     state: state.value,
-    date: date.value
-  })
+    date: date.value,
+  };
+  console.log(payload);
+  await tourStore.addShow(payload);
 };
 
 const cancelSubmit = () => {
