@@ -150,8 +150,6 @@ const paymentMethod = ref('cash');
 const cartOpen = ref(false);
 const showVenue = ref('');
 const showDate = ref('');
-const softExpanded = ref(true);
-const hardExpanded = ref(true);
 const successMessage = ref('');
 const collapsedRows = ref({});
 
@@ -177,12 +175,14 @@ const hardItems = computed(() => inventory.value.filter((item) => item.type === 
 const softItems = computed(() => inventory.value.filter((item) => item.type === 'soft'));
 
 const filteredSales = computed(() => {
-  return (
-    Object.entries(salesStore.transactionSales)
-      // eslint-disable-next-line no-unused-vars
-      .filter(([_, qty]) => qty > 0)
-      .map(([id, qty]) => ({ id, qty }))
-  );
+  return Object.entries(salesStore.transactionSales)
+    .filter(([_, sale]) => sale.quantity > 0)
+    .map(([id, sale]) => ({
+      id,
+      name: sale.name || getItemName(id),
+      price: sale.price || getItemPrice(id),
+      qty: sale.quantity,
+    }));
 });
 
 const groupedSoftItems = computed(() => {
@@ -238,8 +238,6 @@ const fetchShowDetails = async () => {
 };
 
 const getItemName = (id) => {
-  console.log('🔍 Looking for item with ID:', id);
-
   const [itemId, size] = id.split('-');
 
   const item = [...hardItems.value, ...softItems.value].find(
@@ -261,9 +259,22 @@ const getItemName = (id) => {
   return item.name;
 };
 
-const getItemTotal = (id) => {
-  console.log('🔍 Looking for price of item ID:', id);
+const getItemPrice = (id) => {
+  const [itemId, size] = id.split('-');
 
+  const item = [...hardItems.value, ...softItems.value].find(
+    (i) => Number(i.id) === Number(itemId)
+  );
+
+  if (!item) {
+    console.warn('⚠️ Price lookup failed for ID:', id);
+    return '0.00';
+  }
+
+  return item.price ? parseFloat(item.price).toFixed(2) : '0.00';
+};
+
+const getItemTotal = (id) => {
   const [itemId, size] = id.split('-');
 
   const item = [...hardItems.value, ...softItems.value].find(
@@ -275,31 +286,39 @@ const getItemTotal = (id) => {
     return '0.00';
   }
 
+  const itemPrice = item.price ? parseFloat(item.price) : 0;
+
   if (item.type === 'soft' && size) {
     const sizeEntry = item.sizes.find((s) => s.size === size);
     if (sizeEntry) {
       return salesStore.transactionSales[id]
-        ? (salesStore.transactionSales[id] * item.price).toFixed(2)
+        ? (salesStore.transactionSales[id].quantity * itemPrice).toFixed(2)
         : '0.00';
     }
   }
 
   return salesStore.transactionSales[id]
-    ? (salesStore.transactionSales[id] * item.price).toFixed(2)
+    ? (salesStore.transactionSales[id].quantity * itemPrice).toFixed(2)
     : '0.00';
 };
 
 const submitSale = async () => {
-  for (const [id, qty] of Object.entries(salesStore.transactionSales)) {
-    if (qty > 0) {
+  for (const [id, saleData] of Object.entries(salesStore.transactionSales)) {
+    if (saleData.quantity > 0) {
       const item = [...hardItems.value, ...softItems.value].find((i) => i.id === Number(id));
       if (item) {
-        await salesStore.addSale(item.id, showId, qty, qty * item.price, paymentMethod.value);
+        await salesStore.addSale(
+          item.id,
+          showId,
+          saleData.quantity,
+          saleData.quantity * parseFloat(item.price),
+          paymentMethod.value
+        );
       }
     }
   }
 
-  salesStore.resetTransactionSales(); // ✅ Properly resets transactionSales
+  salesStore.resetTransactionSales();
   cartOpen.value = false;
 
   successMessage.value = '✅💰 Sale Recorded Successfully! 💰✅';
@@ -317,7 +336,7 @@ const openCart = () => {
 
 const clearAll = () => {
   Object.keys(salesStore.transactionSales).forEach((id) => {
-    salesStore.transactionSales[id] = 'Qty';
+    delete salesStore.transactionSales[id];
   });
 };
 

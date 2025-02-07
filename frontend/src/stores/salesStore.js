@@ -7,7 +7,7 @@ export const useSalesStore = defineStore('sales', () => {
   const authStore = useAuthStore();
   const recordedSales = ref([]);
   const transactionSales = ref({});
-  const totalSales = ref(0);
+  const totalSales = ref({});
   const cashSales = ref(0);
   const cardSales = ref(0);
 
@@ -54,9 +54,18 @@ export const useSalesStore = defineStore('sales', () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      if (typeof totalSales.value !== 'object' || totalSales.value === null) {
+        totalSales.value = {};
+      }
+
       totalSales.value[tourId] = Number(response.data.total_sales) || 0;
     } catch (error) {
       console.error('Error fetching total tour sales:', error.response?.data || error.message);
+
+      if (typeof totalSales.value !== 'object' || totalSales.value === null) {
+        totalSales.value = {};
+      }
+
       totalSales.value[tourId] = 0;
     }
   };
@@ -144,6 +153,6 @@ export const useSalesStore = defineStore('sales', () => {
     fetchTourTotalSales,
     updateTransactionSale,
     submitTransaction,
-    resetTransactionSales
+    resetTransactionSales,
   };
 });

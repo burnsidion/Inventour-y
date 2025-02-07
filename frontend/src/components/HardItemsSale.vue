@@ -28,10 +28,14 @@
             <input
               type="number"
               class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm"
-              v-model.number="salesStore.transactionSales[item.id]"
+              :value="
+                salesStore.transactionSales[item.id]
+                  ? salesStore.transactionSales[item.id].quantity
+                  : null
+              "
+              @input="updateSale(item.id, $event.target.value)"
               min="0"
-              placeholder="Qty"
-              @input="updateSale(item.id, item.name, item.price, $event.target.value)"
+              :placeholder="salesStore.transactionSales[item.id] === undefined ? 'Qty' : ''"
             />
           </div>
         </div>
@@ -49,13 +53,24 @@ defineProps({
   hardItems: Array,
 });
 
+const getSaleEntry = (id) => {
+  if (!salesStore.transactionSales[id]) {
+    salesStore.transactionSales[id] = { quantity: 0 };
+  }
+  return salesStore.transactionSales[id];
+};
+
 const expanded = ref(true);
 
 const formattedPrice = (price) => {
   const numPrice = parseFloat(price);
   return !isNaN(numPrice) ? numPrice.toFixed(2) : 'N/A';
 };
-</script>
 
-<style lang="scss" scoped>
-</style>
+const updateSale = (id, quantity) => {
+  if (!salesStore.transactionSales[id]) {
+    salesStore.transactionSales[id] = { quantity: 0 };
+  }
+  salesStore.transactionSales[id].quantity = Number(quantity) || 0;
+};
+</script>
