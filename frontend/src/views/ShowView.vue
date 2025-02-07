@@ -14,7 +14,7 @@
       <div class="text-center">
         <button
           class="btn btn-primary px-6 py-2"
-          :disabled="!Object.values(sales).some((qty) => qty > 0)"
+          :disabled="!Object.values(salesStore.transactionSales).some((sale) => sale.quantity > 0)"
           @click="openCart"
         >
           🛒 Start Transaction
@@ -46,8 +46,7 @@
 
     <!-- Inventory Table -->
     <div class="grid md:grid-cols-2 sm:grid-cols-1 gap-6">
-      <!-- Hard Items -->
-      <div>
+      <!-- <div>
         <div class="flex flex-col mb-2">
           <h2 class="text-xl font-semibold mb-4 text-center">🎸 Hard Items</h2>
           <button @click="hardExpanded = !hardExpanded" class="text-sm text-blue-500 mb-2">
@@ -84,77 +83,9 @@
             </div>
           </div>
         </Transition>
-      </div>
+      </div> -->
 
-      <!-- Soft Items -->
-      <div>
-        <div class="flex flex-col mb-2">
-          <h2 class="text-xl font-semibold mb-4 text-center">👕 Soft Items</h2>
-          <button @click="softExpanded = !softExpanded" class="text-sm text-blue-500 mb-2">
-            {{ softExpanded ? 'Collapse' : 'Expand' }}
-          </button>
-        </div>
-
-        <Transition name="fade">
-          <div v-if="softExpanded">
-            <!-- Table Header (4 Columns) -->
-            <div class="grid grid-cols-4 gap-4 text-ivory border-b pb-2 font-bold text-center">
-              <span></span>
-              <!-- Collapse Button Column -->
-              <span>Item</span>
-              <span>Sizes</span>
-              <span>Amount</span>
-            </div>
-
-            <!-- Item Rows -->
-            <div
-              v-for="(sizes, itemName) in groupedSoftItems"
-              :key="itemName"
-              class="grid grid-cols-4 gap-4 border-b py-2"
-            >
-              <!-- Collapse Button -->
-              <div class="flex justify-center py-4">
-                <button
-                  @click="toggleCollapse(itemName)"
-                  class="w-8 h-8 flex items-center py-8 px-8 justify-center rounded bg-gray-700 text-white text-lg"
-                >
-                  {{ collapsedRows[itemName] ? '+' : '-' }}
-                </button>
-              </div>
-
-              <!-- Item Name & Price -->
-              <div class="font-semibold text-md text-center">
-                {{ itemName }} ${{ sizes.length > 0 ? sizes[0].price : 'N/A' }}
-              </div>
-
-              <!-- Sizes Column -->
-              <div v-if="!collapsedRows[itemName]" class="flex flex-col gap-2 items-center w-full">
-                <span
-                  v-for="size in sizes"
-                  :key="size.id"
-                  class="bg-gray-700 px-1 py-1 rounded text-center content-center w-[80px] text-sm sm:text-xs lg:text-base min-h-[40px] whitespace-nowrap"
-                  :class="size.quantity < 30 ? 'text-red-600 animate-pulse' : ''"
-                >
-                  {{ size.size }} ({{ size.quantity }})
-                </span>
-              </div>
-
-              <!-- Sold Quantity Inputs -->
-              <div v-if="!collapsedRows[itemName]" class="flex flex-col gap-2 items-center w-full">
-                <input
-                  v-for="size in sizes"
-                  :key="`${itemName}-${size.size}`"
-                  v-model.number="sales[`${size.id}-${size.size}`]"
-                  type="number"
-                  class="border rounded py-1 px-3 w-[80px] text-center text-sm min-h-[40px]"
-                  min="0"
-                  placeholder="Qty"
-                />
-              </div>
-            </div>
-          </div>
-        </Transition>
-      </div>
+      <HardItemsSale :hardItems="hardItems" />
     </div>
 
     <!-- Success Message -->
@@ -203,6 +134,8 @@ import { useInventoryStore } from '@/stores/inventory';
 import { useRoute } from 'vue-router';
 import { format } from 'date-fns';
 
+import HardItemsSale from '@/components/HardItemsSale.vue';
+
 const salesStore = useSalesStore();
 const tourStore = useTourStore();
 const inventoryStore = useInventoryStore();
@@ -213,7 +146,6 @@ const showId = route.params.id;
 
 const { inventory } = storeToRefs(inventoryStore);
 
-const sales = ref({});
 const paymentMethod = ref('cash');
 const cartOpen = ref(false);
 const showVenue = ref('');
@@ -246,7 +178,7 @@ const softItems = computed(() => inventory.value.filter((item) => item.type === 
 
 const filteredSales = computed(() => {
   return (
-    Object.entries(sales.value)
+    Object.entries(salesStore.transactionSales)
       // eslint-disable-next-line no-unused-vars
       .filter(([_, qty]) => qty > 0)
       .map(([id, qty]) => ({ id, qty }))
@@ -282,7 +214,6 @@ const groupedSoftItems = computed(() => {
 });
 
 const subtotal = computed(() => {
-  console.log(inventory.value);
   return filteredSales.value
     .reduce((sum, sale) => {
       const item = [...hardItems.value, ...softItems.value].find(
@@ -297,11 +228,6 @@ const formatShowDate = (dateString) => {
   if (!dateString) return 'Unknown Date';
   const parsedDate = new Date(dateString);
   return isNaN(parsedDate) ? 'Invalid Date' : format(parsedDate, 'MMM dd, yyyy');
-};
-
-const formattedPrice = (price) => {
-  const numPrice = parseFloat(price);
-  return !isNaN(numPrice) ? numPrice.toFixed(2) : 'N/A';
 };
 
 const fetchShowDetails = async () => {
@@ -340,7 +266,9 @@ const getItemTotal = (id) => {
 
   const [itemId, size] = id.split('-');
 
-  const item = [...hardItems.value, ...softItems.value].find((i) => Number(i.id) === Number(itemId));
+  const item = [...hardItems.value, ...softItems.value].find(
+    (i) => Number(i.id) === Number(itemId)
+  );
 
   if (!item) {
     console.warn('⚠️ Item not found for ID:', id);
@@ -350,15 +278,19 @@ const getItemTotal = (id) => {
   if (item.type === 'soft' && size) {
     const sizeEntry = item.sizes.find((s) => s.size === size);
     if (sizeEntry) {
-      return sales.value[id] ? (sales.value[id] * item.price).toFixed(2) : '0.00';
+      return salesStore.transactionSales[id]
+        ? (salesStore.transactionSales[id] * item.price).toFixed(2)
+        : '0.00';
     }
   }
 
-  return sales.value[id] ? (sales.value[id] * item.price).toFixed(2) : '0.00';
+  return salesStore.transactionSales[id]
+    ? (salesStore.transactionSales[id] * item.price).toFixed(2)
+    : '0.00';
 };
 
 const submitSale = async () => {
-  for (const [id, qty] of Object.entries(sales.value)) {
+  for (const [id, qty] of Object.entries(salesStore.transactionSales)) {
     if (qty > 0) {
       const item = [...hardItems.value, ...softItems.value].find((i) => i.id === Number(id));
       if (item) {
@@ -367,7 +299,7 @@ const submitSale = async () => {
     }
   }
 
-  sales.value = {};
+  salesStore.resetTransactionSales(); // ✅ Properly resets transactionSales
   cartOpen.value = false;
 
   successMessage.value = '✅💰 Sale Recorded Successfully! 💰✅';
@@ -384,8 +316,8 @@ const openCart = () => {
 };
 
 const clearAll = () => {
-  Object.keys(sales.value).forEach((id) => {
-    sales.value[id] = 'Qty';
+  Object.keys(salesStore.transactionSales).forEach((id) => {
+    salesStore.transactionSales[id] = 'Qty';
   });
 };
 
