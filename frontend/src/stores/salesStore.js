@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/auth';
 export const useSalesStore = defineStore('sales', () => {
   const authStore = useAuthStore();
   const sales = ref([]);
-  const totalSales = ref({});
+  const totalSales = ref(0);
   const cashSales = ref(0);
   const cardSales = ref(0);
 
@@ -36,7 +36,7 @@ export const useSalesStore = defineStore('sales', () => {
 
   const resetSales = () => {
     sales.value = [];
-    totalSales.value = {};
+    totalSales.value = 0;
     cashSales.value = 0;
     cardSales.value = 0;
   };
@@ -70,13 +70,16 @@ export const useSalesStore = defineStore('sales', () => {
   };
 
   const calculateTotals = () => {
-    totalSales.value = sales.value
-      .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0)
-      .toFixed(2);
+    totalSales.value =
+      sales.value.length > 0
+        ? sales.value.reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0).toFixed(2)
+        : 0;
+
     cashSales.value = sales.value
       .filter((sale) => sale.payment_method === 'cash')
       .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0)
       .toFixed(2);
+
     cardSales.value = sales.value
       .filter((sale) => sale.payment_method === 'card')
       .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0)

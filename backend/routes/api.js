@@ -244,6 +244,30 @@ router.post("/shows", authenticateToken, async (req, res) => {
   }
 });
 
+router.get("/shows", authenticateToken, async (req, res) => {
+  const { tour_id } = req.query;
+
+  if (!tour_id) {
+    return res.status(400).json({ error: "Missing required tour_id" });
+  }
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM shows WHERE tour_id = $1 ORDER BY date ASC",
+      [tour_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No shows found for this tour" });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching shows:", error);
+    res.status(500).json({ error: "Failed to fetch shows" });
+  }
+});
+
 // router.get("/inventory", authenticateToken, async (req, res) => {
 //   try {
 //     console.log("this route called in the show routes");
@@ -467,7 +491,10 @@ router.put("/inventory/:id", authenticateToken, async (req, res) => {
 
   try {
     // Fetch item to determine if it's 'soft' or 'hard'
-    const itemResult = await pool.query("SELECT type FROM inventory WHERE id = $1", [id]);
+    const itemResult = await pool.query(
+      "SELECT type FROM inventory WHERE id = $1",
+      [id]
+    );
 
     if (itemResult.rows.length === 0) {
       return res.status(404).json({ error: "Item not found" });
@@ -486,7 +513,10 @@ router.put("/inventory/:id", authenticateToken, async (req, res) => {
 
     if (itemType === "hard") {
       // Update quantity in inventory table
-      await pool.query(`UPDATE inventory SET quantity = $1 WHERE id = $2`, [quantity, id]);
+      await pool.query(`UPDATE inventory SET quantity = $1 WHERE id = $2`, [
+        quantity,
+        id,
+      ]);
     } else if (itemType === "soft" && sizes) {
       // Update each size in inventory_sizes table
       for (const size of sizes) {
@@ -652,12 +682,26 @@ router.get("/sales", authenticateToken, async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT sales.id, sales.quantity_sold, sales.total_amount, sales.payment_method, sales.created_at,
-              inventory.name AS item_name, inventory.type, inventory.size, inventory.price
-       FROM sales
-       JOIN inventory ON sales.inventory_id = inventory.id
-       WHERE sales.show_id = $1
-       ORDER BY sales.created_at DESC`,
+      `SELECT 
+        sales.id, 
+        sales.quantity_sold, 
+        sales.total_amount, 
+        sales.payment_method, 
+        sales.created_at,
+        inventory.name AS item_name, 
+        inventory.type, 
+        inventory.price,
+        CASE 
+            WHEN inventory.type = 'soft' 
+            THEN json_agg(json_build_object('size', inventory_sizes.size, 'quantity', inventory_sizes.quantity))
+            ELSE NULL
+        END AS sizes
+        FROM sales
+        JOIN inventory ON sales.inventory_id = inventory.id
+        LEFT JOIN inventory_sizes ON inventory.id = inventory_sizes.inventory_id
+        WHERE sales.show_id = $1
+        GROUP BY sales.id, inventory.id
+        ORDER BY sales.created_at DESC;`,
       [show_id]
     );
 
