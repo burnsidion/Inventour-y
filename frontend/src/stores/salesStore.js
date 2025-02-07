@@ -2,9 +2,11 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
+import { useInventoryStore } from './inventory';
 
 export const useSalesStore = defineStore('sales', () => {
   const authStore = useAuthStore();
+  const inventoryStore = useInventoryStore();
   const sales = ref([]);
   const totalSales = ref(0);
   const cashSales = ref(0);
@@ -102,5 +104,79 @@ export const useSalesStore = defineStore('sales', () => {
     }
   };
 
-  return { sales, totalSales, cashSales, cardSales, fetchSales, addSale, fetchTourTotalSales };
+  const getItemTotal = (id, sales) => {
+    const [itemId, size] = id.split('-');
+
+    const allItems = [...inventoryStore.inventory];
+
+    const item = allItems.find((i) => Number(i.id) === Number(itemId));
+
+    if (!item) return '0.00';
+
+    if (item.type === 'soft' && size) {
+      const sizeEntry = item.sizes.find((s) => s.size === size);
+      if (sizeEntry) {
+        return sales[id] ? (sales[id] * item.price).toFixed(2) : '0.00';
+      }
+    }
+
+    return sales[id] ? (sales[id] * item.price).toFixed(2) : '0.00';
+  };
+
+  const submitSale = async (salesData, showId, paymentMethod) => {
+    try {
+      for (const [id, qty] of Object.entries(salesData)) {
+        if (qty > 0) {
+          const item = [...inventoryStore.inventory].find((i) => i.id === Number(id));
+
+          if (item) {
+            await axios.post(
+              'http://localhost:5002/api/sales',
+              {
+                inventory_id: item.id,
+                show_id: showId,
+                quantity_sold: qty,
+                total_amount: qty * item.price,
+                payment_method: paymentMethod,
+              },
+              { headers: { Authorization: `Bearer ${authStore.token}` } },
+            );
+          }
+        }
+      }
+
+      sales.value = {};
+      successMessage.value = '✅💰 Sale Recorded Successfully! 💰✅';
+
+      setTimeout(() => {
+        successMessage.value = '';
+      }, 2000);
+
+      await fetchSales(showId);
+    } catch (error) {
+      console.error('Error submitting sale:', error);
+    }
+  };
+
+  const updateSale = (id, name, price, quantity) => {
+    if (quantity === null || quantity === undefined || isNaN(quantity)) {
+      console.error('🚨 Invalid quantity passed to updateSale:', quantity);
+      return;
+    }
+
+    sales.value[id] = Number(quantity);
+  };
+
+  return {
+    sales,
+    totalSales,
+    cashSales,
+    cardSales,
+    fetchSales,
+    addSale,
+    fetchTourTotalSales,
+    getItemTotal,
+    submitSale,
+    updateSale,
+  };
 });
