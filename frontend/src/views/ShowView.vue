@@ -12,11 +12,7 @@
         <router-link to="/" class="btn btn-primary"> ← Back to Home Page </router-link>
       </div>
       <div class="text-center">
-        <button
-          class="btn btn-primary px-6 py-2"
-          :disabled="!Object.values(salesStore.transactionSales).some((sale) => sale.quantity > 0)"
-          @click="openCart"
-        >
+        <button class="btn btn-primary px-6 py-2" :disabled="!isTransactionValid" @click="openCart">
           🛒 Start Transaction
         </button>
       </div>
@@ -46,46 +42,8 @@
 
     <!-- Inventory Table -->
     <div class="grid md:grid-cols-2 sm:grid-cols-1 gap-6">
-      <!-- <div>
-        <div class="flex flex-col mb-2">
-          <h2 class="text-xl font-semibold mb-4 text-center">🎸 Hard Items</h2>
-          <button @click="hardExpanded = !hardExpanded" class="text-sm text-blue-500 mb-2">
-            {{ hardExpanded ? 'Collapse' : 'Expand' }}
-          </button>
-        </div>
-        <Transition name="fade">
-          <div v-if="hardExpanded">
-            <div class="grid grid-cols-4 gap-4 text-ivory border-b pb-2 font-bold text-center">
-              <span>Item</span>
-              <span>Stock</span>
-              <span>Price</span>
-              <span>Sold</span>
-            </div>
-            <div
-              v-for="item in hardItems"
-              :key="item.id"
-              class="grid grid-cols-4 gap-4 border-b py-2 items-center text-center"
-            >
-              <span class="whitespace-nowrap text-left">{{ item.name }}</span>
-              <span :class="item.quantity < 30 ? 'text-red-600 animate-pulse' : ''">{{
-                item.quantity
-              }}</span>
-              <span>${{ formattedPrice(item.price) }}</span>
-              <div class="flex justify-center">
-                <input
-                  type="number"
-                  class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm"
-                  v-model.number="sales[item.id]"
-                  min="0"
-                  placeholder="Qty"
-                />
-              </div>
-            </div>
-          </div>
-        </Transition>
-      </div> -->
-
       <HardItemsSale :hardItems="hardItems" />
+      <SoftItemsSale :softItems="softItems" />
     </div>
 
     <!-- Success Message -->
@@ -107,7 +65,9 @@
         <div class="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full text-[#393f4d] text-center">
           <h2 class="text-2xl font-semibold mb-4">🛒 Transaction Summary</h2>
           <div v-for="sale in filteredSales" :key="sale.id">
-            <p>{{ getItemName(sale.id) }} x {{ sale.qty }} - ${{ getItemTotal(sale.id) }}</p>
+            <p>
+              {{ getItemName(sale.id, sale.size) }} x {{ sale.qty }} - ${{ getItemPrice(sale.id) }}
+            </p>
           </div>
           <p class="font-bold mt-4">Subtotal: ${{ subtotal }}</p>
           <div class="flex gap-4 mt-4 justify-center">
@@ -135,6 +95,7 @@ import { useRoute } from 'vue-router';
 import { format } from 'date-fns';
 
 import HardItemsSale from '@/components/HardItemsSale.vue';
+import SoftItemsSale from '@/components/SoftItemsSale.vue';
 
 const salesStore = useSalesStore();
 const tourStore = useTourStore();
@@ -151,15 +112,8 @@ const cartOpen = ref(false);
 const showVenue = ref('');
 const showDate = ref('');
 const successMessage = ref('');
-const collapsedRows = ref({});
-
-const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 onMounted(async () => {
-  const storedState = localStorage.getItem('collapsedRows');
-  if (storedState) {
-    collapsedRows.value = JSON.parse(storedState);
-  }
   if (!tourId) {
     console.error('🚨 No tourId found in query params');
   } else {
@@ -174,153 +128,90 @@ onMounted(async () => {
 const hardItems = computed(() => inventory.value.filter((item) => item.type === 'hard'));
 const softItems = computed(() => inventory.value.filter((item) => item.type === 'soft'));
 
-const filteredSales = computed(() => {
-  return Object.entries(salesStore.transactionSales)
-    .filter(([_, sale]) => sale.quantity > 0)
-    .map(([id, sale]) => ({
-      id,
-      name: sale.name || getItemName(id),
-      price: sale.price || getItemPrice(id),
+const hardItemsArray = computed(() => {
+  return Object.values(salesStore.transactionSales)
+    .filter((sale) => sale.quantity > 0) // No need for entries if ID isn't needed
+    .map((sale) => ({
+      id: sale.id, // Assuming `id` is stored in the object
+      name: sale.name || getItemName(sale.id),
+      price: sale.price ? parseFloat(sale.price).toFixed(2) : getItemPrice(sale.id),
       qty: sale.quantity,
     }));
 });
 
-const groupedSoftItems = computed(() => {
-  const grouped = {};
+const softItemsArray = computed(() => {
+  let softSales = [];
 
-  softItems.value.forEach((item) => {
-    if (!grouped[item.name]) {
-      grouped[item.name] = [];
-    }
-
-    if (Array.isArray(item.sizes)) {
-      item.sizes.forEach((sizeObj) => {
-        grouped[item.name].push({
-          id: `${item.id}-${sizeObj.size}`,
-          name: item.name,
-          size: sizeObj.size,
-          quantity: sizeObj.quantity,
-          price: item.price,
-        });
+  Object.entries(salesStore.transactionSales).forEach(([id, sale]) => {
+    if (sale.sizes) {
+      Object.entries(sale.sizes).forEach(([size, sizeData]) => {
+        if (sizeData.quantity > 0) {
+          softSales.push({
+            id,
+            name: `${sale.name} (${size})`,
+            size,
+            price: Number(sale.price) || getItemPrice(id),
+            qty: sizeData.quantity,
+          });
+        }
       });
     }
   });
 
-  Object.keys(grouped).forEach((key) => {
-    grouped[key].sort((a, b) => sizeOrder.indexOf(a.size) - sizeOrder.indexOf(b.size));
-  });
-
-  return grouped;
+  return softSales;
 });
+
+const filteredSales = computed(() => [...hardItemsArray.value, ...softItemsArray.value]);
 
 const subtotal = computed(() => {
-  return filteredSales.value
-    .reduce((sum, sale) => {
-      const item = [...hardItems.value, ...softItems.value].find(
-        (i) => Number(i.id) === Number(sale.id)
-      );
-      return sum + (item ? sale.qty * item.price : 0);
-    }, 0)
-    .toFixed(2);
+  return filteredSales.value.reduce((sum, sale) => sum + sale.qty * sale.price, 0).toFixed(2);
 });
 
-const formatShowDate = (dateString) => {
-  if (!dateString) return 'Unknown Date';
-  const parsedDate = new Date(dateString);
-  return isNaN(parsedDate) ? 'Invalid Date' : format(parsedDate, 'MMM dd, yyyy');
-};
+const isTransactionValid = computed(() => {
+  return Object.values(salesStore.transactionSales).some((sale) => {
+    return sale.quantity > 0 || Object.values(sale.sizes || {}).some((size) => size.quantity > 0);
+  });
+});
 
-const fetchShowDetails = async () => {
-  const details = await tourStore.getShowDetails(showId);
-  if (details) {
-    (showVenue.value = details.venue), (showDate.value = details.showDate);
-  }
-};
-
-const getItemName = (id) => {
-  const [itemId, size] = id.split('-');
-
-  const item = [...hardItems.value, ...softItems.value].find(
-    (i) => Number(i.id) === Number(itemId)
-  );
+const getItemName = (id, size) => {
+  const item = [...hardItems.value, ...softItems.value].find((i) => Number(i.id) === Number(id));
 
   if (!item) {
     console.warn('⚠️ Item not found for ID:', id);
     return 'Unknown';
   }
 
-  if (item.type === 'soft' && size) {
-    const sizeEntry = item.sizes.find((s) => s.size === size);
-    if (sizeEntry) {
-      return `${item.name} (${sizeEntry.size})`;
-    }
-  }
-
-  return item.name;
+  return item.type === 'soft' ? `${item.name} (${size})` : item.name;
 };
 
 const getItemPrice = (id) => {
-  const [itemId, size] = id.split('-');
-
-  const item = [...hardItems.value, ...softItems.value].find(
-    (i) => Number(i.id) === Number(itemId)
-  );
-
-  if (!item) {
-    console.warn('⚠️ Price lookup failed for ID:', id);
-    return '0.00';
-  }
-
-  return item.price ? parseFloat(item.price).toFixed(2) : '0.00';
+  const item = [...hardItems.value, ...softItems.value].find((i) => Number(i.id) === Number(id));
+  return item ? parseFloat(item.price).toFixed(2) : '0.00';
 };
 
-const getItemTotal = (id) => {
-  const [itemId, size] = id.split('-');
+const formatShowDate = (dateString) => {
+  if (!dateString) return 'N/A'; // Handle missing date
 
-  const item = [...hardItems.value, ...softItems.value].find(
-    (i) => Number(i.id) === Number(itemId)
-  );
+  const parsedDate = new Date(dateString);
+  return isNaN(parsedDate.getTime()) ? 'Invalid Date' : format(parsedDate, 'MMM dd, yyyy');
+};
 
-  if (!item) {
-    console.warn('⚠️ Item not found for ID:', id);
-    return '0.00';
+const fetchShowDetails = async () => {
+  const details = await tourStore.getShowDetails(showId);
+  if (details) {
+    showVenue.value = details.venue;
+    showDate.value = details.date;
   }
-
-  const itemPrice = item.price ? parseFloat(item.price) : 0;
-
-  if (item.type === 'soft' && size) {
-    const sizeEntry = item.sizes.find((s) => s.size === size);
-    if (sizeEntry) {
-      return salesStore.transactionSales[id]
-        ? (salesStore.transactionSales[id].quantity * itemPrice).toFixed(2)
-        : '0.00';
-    }
-  }
-
-  return salesStore.transactionSales[id]
-    ? (salesStore.transactionSales[id].quantity * itemPrice).toFixed(2)
-    : '0.00';
+  console.log('DETAILS', details);
 };
 
 const submitSale = async () => {
-  for (const [id, saleData] of Object.entries(salesStore.transactionSales)) {
-    if (saleData.quantity > 0) {
-      const item = [...hardItems.value, ...softItems.value].find((i) => i.id === Number(id));
-      if (item) {
-        await salesStore.addSale(
-          item.id,
-          showId,
-          saleData.quantity,
-          saleData.quantity * parseFloat(item.price),
-          paymentMethod.value
-        );
-      }
-    }
+  for (const sale of filteredSales.value) {
+    await salesStore.addSale(sale.id, showId, sale.qty, sale.qty * sale.price, paymentMethod.value);
   }
 
   salesStore.resetTransactionSales();
   cartOpen.value = false;
-
   successMessage.value = '✅💰 Sale Recorded Successfully! 💰✅';
 
   setTimeout(() => {
@@ -335,13 +226,6 @@ const openCart = () => {
 };
 
 const clearAll = () => {
-  Object.keys(salesStore.transactionSales).forEach((id) => {
-    delete salesStore.transactionSales[id];
-  });
-};
-
-const toggleCollapse = (itemKey) => {
-  collapsedRows.value[itemKey] = !collapsedRows.value[itemKey];
-  localStorage.setItem('collapsedRows', JSON.stringify(collapsedRows.value));
+  salesStore.transactionSales = {};
 };
 </script>
