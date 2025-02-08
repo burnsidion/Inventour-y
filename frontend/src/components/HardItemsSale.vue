@@ -33,7 +33,7 @@
                   ? salesStore.transactionSales[item.id].quantity
                   : null
               "
-              @input="updateSale(item.id, $event.target.value)"
+              @input="updateSale(item.id, item.name, item.price, $event.target.value)"
               min="0"
               :placeholder="salesStore.transactionSales[item.id] === undefined ? 'Qty' : ''"
             />
@@ -53,13 +53,6 @@ defineProps({
   hardItems: Array,
 });
 
-const getSaleEntry = (id) => {
-  if (!salesStore.transactionSales[id]) {
-    salesStore.transactionSales[id] = { quantity: 0 };
-  }
-  return salesStore.transactionSales[id];
-};
-
 const expanded = ref(true);
 
 const formattedPrice = (price) => {
@@ -67,10 +60,18 @@ const formattedPrice = (price) => {
   return !isNaN(numPrice) ? numPrice.toFixed(2) : 'N/A';
 };
 
-const updateSale = (id, quantity) => {
+const updateSale = (id, name, price, quantity) => {
   if (!salesStore.transactionSales[id]) {
-    salesStore.transactionSales[id] = { quantity: 0 };
+    salesStore.transactionSales[id] = {
+      id,
+      name,
+      price: parseFloat(price).toFixed(2),
+      quantity: 0,
+    };
   }
+
   salesStore.transactionSales[id].quantity = Number(quantity) || 0;
+
+  console.log('Updated transactionSales:', salesStore.transactionSales);
 };
 </script>

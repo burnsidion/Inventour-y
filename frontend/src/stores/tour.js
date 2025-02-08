@@ -49,8 +49,14 @@ export const useTourStore = defineStore('tour', () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (response.data && response.data.name) {
+      if (response.data) {
         tourName.value = response.data.name;
+        showDetails.value = {
+          venue: response.data.venue || '',
+          date: response.data.date || '',
+          start_date: response.data.start_date || '',
+          end_date: response.data.end_date || '',
+        };
       }
     } catch (error) {
       console.error('Error fetching tour details', error);

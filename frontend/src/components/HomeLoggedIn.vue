@@ -17,7 +17,7 @@
               <h2 class="text-xl font-semibold text-center md:text-left text-[#393f4d]">
                 {{ tour.name }}
               </h2>
-              <div class="flex justify-between">
+              <div class="flex justify-between flex-col gap-2">
                 <p class="text-gray-600 text-center md:text-left">
                   📅 {{ formatTourDate(tour.start_date) }} - {{ formatTourDate(tour.end_date) }}
                 </p>
@@ -102,7 +102,11 @@ const createShow = (tourId) => {
 };
 
 const formatTourDate = (dateString) => {
-  return format(new Date(dateString), 'MMM dd, yyyy');
+  console.log("HELLLOO")
+  if (!dateString) return 'N/A'; // Handle missing date
+
+  const parsedDate = new Date(dateString);
+  return isNaN(parsedDate) ? 'Invalid Date' : format(parsedDate, 'MMM dd, yyyy');
 };
 
 const createTour = () => {
