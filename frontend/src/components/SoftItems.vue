@@ -55,10 +55,10 @@
                     <td class="p-2">{{ sizeEntry.size }}</td>
                     <td
                       class="p-2 text-center"
-                      :class="sizeEntry.quantity < 30 ? 'text-red-600 animate-pulse' : ''"
+                      :class="lowStockAlert(sizeEntry.quantity) ? 'text-red-600 animate-pulse' : ''"
                     >
                       {{
-                        sizeEntry.quantity < 30
+                        lowStockAlert(sizeEntry.quantity)
                           ? `${sizeEntry.quantity} LOW STOCK!!!`
                           : sizeEntry.quantity
                       }}
@@ -107,6 +107,10 @@ const softItemsList = computed(() => {
 const formattedPrice = (price) => {
   const numPrice = parseFloat(price);
   return !isNaN(numPrice) ? numPrice.toFixed(2) : 'N/A';
+};
+
+const lowStockAlert = (quantity) => {
+  return quantity < 30;
 };
 
 const toggleEditForm = (item) => {

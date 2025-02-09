@@ -20,7 +20,7 @@
           class="grid grid-cols-4 gap-4 border-b py-2 items-center text-center"
         >
           <span class="whitespace-nowrap text-left">{{ item.name }}</span>
-          <span :class="item.quantity < 30 ? 'text-red-600 animate-pulse' : ''">{{
+          <span :class="lowStockAlert(item.quantity) ? 'text-red-600 animate-pulse' : ''">{{
             item.quantity
           }}</span>
           <span>${{ formattedPrice(item.price) }}</span>
@@ -28,14 +28,10 @@
             <input
               type="number"
               class="border rounded py-1 px-3 w-full lg:w-[50%] text-center text-sm"
-              :value="
-                salesStore.transactionSales[item.id]
-                  ? salesStore.transactionSales[item.id].quantity
-                  : null
-              "
+              :value="getSaleQuantity(item.id)"
               @input="updateSale(item.id, item.name, item.price, $event.target.value)"
               min="0"
-              :placeholder="salesStore.transactionSales[item.id] === undefined ? 'Qty' : ''"
+              :placeholder="getSalePlaceholder(item.id)"
             />
           </div>
         </div>
@@ -45,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useSalesStore } from '@/stores/salesStore';
 
 const salesStore = useSalesStore();
@@ -54,6 +50,14 @@ defineProps({
 });
 
 const expanded = ref(true);
+
+const getSaleQuantity = computed(() => {
+  return (id) => salesStore.transactionSales[id]?.quantity ?? null;
+});
+
+const getSalePlaceholder = computed(() => {
+  return (id) => (salesStore.transactionSales[id] === undefined ? 'Qty' : '');
+});
 
 const formattedPrice = (price) => {
   const numPrice = parseFloat(price);
@@ -71,5 +75,9 @@ const updateSale = (id, name, price, quantity) => {
   }
 
   salesStore.transactionSales[id].quantity = Number(quantity) || 0;
+};
+
+const lowStockAlert = (quantity) => {
+  return quantity < 30;
 };
 </script>

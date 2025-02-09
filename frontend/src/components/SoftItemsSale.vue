@@ -45,7 +45,7 @@
               v-for="size in sizes"
               :key="size.id"
               class="bg-gray-700 px-1 py-1 rounded text-center content-center w-[80px] text-sm sm:text-xs lg:text-base min-h-[40px] whitespace-nowrap"
-              :class="size.quantity < 30 ? 'text-red-600 animate-pulse' : ''"
+              :class="lowStockAlert(size.quantity) ? 'text-red-600 animate-pulse' : ''"
             >
               {{ size.size }} ({{ size.quantity }})
             </span>
@@ -56,7 +56,7 @@
             <input
               v-for="size in sizes"
               :key="`${itemName}-${size.size}`"
-              :value="salesStore.transactionSales[size.id]?.sizes?.[size.size]?.quantity || null"
+              :value="getSaleQuantity(size.id, size.size)"
               @input="
                 updateTransaction(size.id, size.size, itemName, size.price, $event.target.value)
               "
@@ -112,6 +112,11 @@ const groupedSoftItems = computed(() => {
   });
   return grouped;
 });
+
+const getSaleQuantity = (id, size) => {
+  return salesStore.transactionSales[id]?.sizes?.[size]?.quantity ?? null;
+};
+
 const toggleCollapse = (itemKey) => {
   collapsedRows.value[itemKey] = !collapsedRows.value[itemKey];
   localStorage.setItem('collapsedRows', JSON.stringify(collapsedRows.value));
@@ -132,5 +137,9 @@ const updateTransaction = (id, size, itemName, price, quantity) => {
   }
 
   salesStore.transactionSales[id].sizes[size].quantity = Number(quantity) || 0;
+};
+
+const lowStockAlert = (quantity) => {
+  return quantity < 30;
 };
 </script>
