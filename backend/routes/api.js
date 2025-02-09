@@ -93,7 +93,7 @@ router.put("/users", authenticateToken, async (req, res) => {
            email = COALESCE($2, email), 
            password = COALESCE($3, password),
            bio = COALESCE($4, bio)
-       WHERE id = $5 RETURNING id, name, email, bio`,
+       WHERE id = $5 RETURNING id, name, email, bio, profile_pic`,
       [name, email, hashedPassword, bio, userId]
     );
 
