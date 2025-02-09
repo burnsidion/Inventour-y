@@ -96,12 +96,10 @@ const updateInventory = () => {
       size: sizeObj.size,
       new_quantity: sizeObj.newStock + (addedQuantity.value[index] || 0),
     }));
-    console.log('Updated Soft Item:', updatedData);
   }
 
   if (props.inventoryItem.type === 'hard') {
     updatedData.quantity = (props.inventoryItem.quantity || 0) + addedQuantity.value;
-    console.log('Updated Hard Item:', updatedData);
   }
 
   emit('save', updatedData);

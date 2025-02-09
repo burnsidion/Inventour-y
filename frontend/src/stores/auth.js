@@ -20,13 +20,12 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value) return;
 
     try {
-      const decodedToken = JSON.parse(atob(token.value.split('.')[1])); 
+      const decodedToken = JSON.parse(atob(token.value.split('.')[1]));
       const userId = decodedToken.id;
 
       const response = await axios.get(`http://localhost:5002/api/users/${userId}`, {
         headers: { Authorization: `Bearer ${token.value}` },
       });
-
       user.value = response.data;
     } catch (error) {
       console.error('Error fetching user data:', error.response?.data || error.message);
@@ -69,9 +68,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const signupUser = async (userData) => {
     try {
-      const response = await axios.post('http://localhost:5002/api/users', userData);
-
-      console.log('✅ User created:', response.data);
+      await axios.post('http://localhost:5002/api/users', userData);
       return { success: true, message: 'User created successfully' };
     } catch (error) {
       console.error('🚨 Error signing up:', error.response?.data || error.message);
@@ -106,6 +103,40 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  const updateUsername = async (newUsername) => {
+    try {
+      await axios.put(
+        'http://localhost:5002/api/users',
+        { name: newUsername },
+        {
+          headers: { Authorization: `Bearer ${token.value}` },
+        },
+      );
+
+      user.value.name = newUsername;
+    } catch (error) {
+      console.error('Error updating username:', error.response?.data || error.message);
+      throw error;
+    }
+  };
+
+  const updateBio = async (newBio) => {
+    try {
+      const response = await axios.put(
+        'http://localhost:5002/api/users',
+        { bio: newBio },
+        {
+          headers: { Authorization: `Bearer ${token.value}` },
+        },
+      );
+
+      user.value.bio = response.data.user.bio;
+    } catch (error) {
+      console.error('Error updating bio:', error);
+      throw error;
+    }
+  };
+
   return {
     user,
     token,
@@ -117,5 +148,7 @@ export const useAuthStore = defineStore('auth', () => {
     signupUser,
     loginUser,
     fetchUserData,
+    updateUsername,
+    updateBio,
   };
 });
