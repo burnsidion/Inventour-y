@@ -71,7 +71,5 @@ const updateSale = (id, name, price, quantity) => {
   }
 
   salesStore.transactionSales[id].quantity = Number(quantity) || 0;
-
-  console.log('Updated transactionSales:', salesStore.transactionSales);
 };
 </script>

@@ -65,7 +65,6 @@ const submitShow = async () => {
     state: state.value,
     date: date.value,
   };
-  console.log(payload);
   await tourStore.addShow(payload);
 };
 

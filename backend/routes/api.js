@@ -2,11 +2,24 @@ import express from "express";
 import pool from "../utils/database.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import multer from "multer";
+import path from "path";
 
 import { authenticateToken } from "../middleware/authenticateToken.js";
 import { authorizeRole } from "../middleware/authorizeRole.js";
 
 const router = express.Router();
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+
+const upload = multer({ storage });
 
 //Users Routes
 router.get("/users/:id", authenticateToken, async (req, res) => {
@@ -18,7 +31,7 @@ router.get("/users/:id", authenticateToken, async (req, res) => {
 
   try {
     const result = await pool.query(
-      "SELECT id, name, email FROM users WHERE id = $1",
+      "SELECT id, name, email, profile_pic, bio FROM users WHERE id = $1",
       [userId]
     );
 
@@ -64,7 +77,7 @@ router.post("/users", async (req, res) => {
 });
 
 router.put("/users", authenticateToken, async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, bio } = req.body;
   const userId = req.user.id;
 
   try {
@@ -78,9 +91,10 @@ router.put("/users", authenticateToken, async (req, res) => {
       `UPDATE users 
        SET name = COALESCE($1, name), 
            email = COALESCE($2, email), 
-           password = COALESCE($3, password) 
-       WHERE id = $4 RETURNING id, name, email`,
-      [name, email, hashedPassword, userId]
+           password = COALESCE($3, password),
+           bio = COALESCE($4, bio)
+       WHERE id = $5 RETURNING id, name, email, bio`,
+      [name, email, hashedPassword, bio, userId]
     );
 
     res

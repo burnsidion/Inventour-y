@@ -202,7 +202,6 @@ const fetchShowDetails = async () => {
     showVenue.value = details.venue;
     showDate.value = details.date;
   }
-  console.log('DETAILS', details);
 };
 
 const submitSale = async () => {

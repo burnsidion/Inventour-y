@@ -104,13 +104,13 @@ export const useInventoryStore = defineStore('inventory', () => {
     try {
       const authStore = useAuthStore();
       const token = authStore.token;
-  
+
       const response = await axios.put(
         `http://localhost:5002/api/inventory/${updatedItem.id}`,
         updatedItem,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-  
+
       const index = inventory.value.findIndex((item) => item.id === updatedItem.id);
       if (index !== -1) {
         inventory.value[index] = {
@@ -119,7 +119,7 @@ export const useInventoryStore = defineStore('inventory', () => {
           quantity: response.data.quantity || 0,
         };
       }
-  
+
       return response.data;
     } catch (error) {
       console.error('❌ Error editing inventory item:', error.response?.data || error);
@@ -127,7 +127,6 @@ export const useInventoryStore = defineStore('inventory', () => {
   };
 
   const saveInventoryChanges = async (updatedData, tourId) => {
-    console.log("Saving Inventory Changes:", updatedData);
     try {
       await editInventoryItem(updatedData);
       await fetchInventory(tourId);
@@ -145,6 +144,6 @@ export const useInventoryStore = defineStore('inventory', () => {
     updateInventoryItem,
     deleteInventoryItem,
     editInventoryItem,
-    saveInventoryChanges
+    saveInventoryChanges,
   };
 });
