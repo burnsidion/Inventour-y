@@ -37,8 +37,13 @@
                 </thead>
                 <tbody>
                   <tr class="border-b border-gray-500">
-                    <td class="p-2" :class="item.quantity < 30 ? 'text-red-600 animate-pulse' : ''">
-                      {{ item.quantity < 30 ? `${item.quantity} LOW STOCK` : item.quantity }}
+                    <td
+                      class="p-2"
+                      :class="lowStockAlert(item.quantity) ? 'text-red-600 animate-pulse' : ''"
+                    >
+                      {{
+                        lowStockAlert(item.quantity) ? `${item.quantity} LOW STOCK` : item.quantity
+                      }}
                     </td>
                     <td class="p-2 text-right">${{ formattedPrice(item.price) }}</td>
                   </tr>
@@ -91,6 +96,9 @@ const hardItemsList = computed(() =>
   inventoryStore.inventory.filter((item) => item.type === 'hard')
 );
 
+const lowStockAlert = (quantity) => {
+  return quantity < 30;
+};
 const formattedPrice = (price) => {
   const numPrice = parseFloat(price);
   return !isNaN(numPrice) ? numPrice.toFixed(2) : 'N/A';
