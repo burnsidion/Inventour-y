@@ -50,9 +50,6 @@
                 </tbody>
               </table>
               <div class="flex justify-center mt-2 gap-2">
-                <button @click="deleteItem(item.id)" class="btn btn-error text-white">
-                  🗑 Delete Item
-                </button>
                 <button @click="toggleEditForm(item)" class="btn btn-error text-white">
                   📝 Edit Item
                 </button>
@@ -81,7 +78,7 @@ import EditInventoryForm from './EditInventoryForm.vue';
 
 const route = useRoute();
 const inventoryStore = useInventoryStore();
-const { deleteInventoryItem, saveInventoryChanges, fetchInventory } = inventoryStore;
+const { saveInventoryChanges, fetchInventory } = inventoryStore;
 
 const expanded = ref(true);
 const editingItem = ref(null);
@@ -102,20 +99,6 @@ const lowStockAlert = (quantity) => {
 const formattedPrice = (price) => {
   const numPrice = parseFloat(price);
   return !isNaN(numPrice) ? numPrice.toFixed(2) : 'N/A';
-};
-
-const deleteItem = async (itemId) => {
-  if (!itemId) {
-    console.error('❌ Item ID is undefined. Cannot proceed with deletion.');
-    return;
-  }
-  const confirmed = confirm('Are you sure you want to delete this item?');
-  if (!confirmed) return;
-
-  const success = await deleteInventoryItem(itemId);
-  if (!success) {
-    alert('Failed to delete item, please try again');
-  }
 };
 
 const toggleEditForm = (item) => {
