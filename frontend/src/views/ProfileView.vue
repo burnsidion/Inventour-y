@@ -148,7 +148,6 @@
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useTourStore } from '@/stores/tour';
-import axios from 'axios';
 
 const authStore = useAuthStore();
 const tourStore = useTourStore();

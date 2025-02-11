@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import SignupView from '@/views/SignupView.vue';
 import HomeView from '@/views/HomeView.vue';
 import LoginView from '@/views/LoginView.vue';
-import CreateTour from '@/components/CreateTour.vue';
+import TourForm from '@/components/TourForm.vue';
 import ShowView from '@/views/ShowView.vue';
 import CreateShowView from '@/views/CreateShowView.vue';
 import InventoryView from '@/views/InventoryView.vue';
@@ -30,12 +30,18 @@ const router = createRouter({
     {
       path: '/profile',
       name: 'ProfileView',
-      component: ProfileView
+      component: ProfileView,
     },
     {
-      path: '/create-tour',
+      path: '/tours/create',
       name: 'CreateTour',
-      component: CreateTour,
+      component: TourForm,
+    },
+    {
+      path: '/tours/:id/edit',
+      name: 'EditTour',
+      component: TourForm,
+      props: true,
     },
     {
       path: '/shows/create',

@@ -249,6 +249,43 @@ router.get("/tours/:id", authenticateToken, async (req, res) => {
   }
 });
 
+router.put("/tours/:id", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { name, start_date, end_date, band_name } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const tourCheck = await pool.query(
+      "SELECT * FROM tours WHERE id = $1 AND user_id = $2",
+      [id, userId]
+    );
+
+    if (tourCheck.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "Tour not found or unauthorized" });
+    }
+
+    const result = await pool.query(
+      `UPDATE tours 
+       SET name = COALESCE($1, name), 
+           start_date = COALESCE($2, start_date), 
+           end_date = COALESCE($3, end_date), 
+           band_name = COALESCE($4, band_name)
+       WHERE id = $5 
+       RETURNING *`,
+      [name, start_date, end_date, band_name, id]
+    );
+
+    res
+      .status(200)
+      .json({ message: "Tour updated successfully", tour: result.rows[0] });
+  } catch (error) {
+    console.error("Error updating tour:", error);
+    res.status(500).json({ message: "Failed to update tour" });
+  }
+});
+
 router.delete("/tours/:id", authenticateToken, async (req, res) => {
   const tourId = req.params.id;
   const userId = req.user.id;
