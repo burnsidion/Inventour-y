@@ -119,12 +119,12 @@ router.put(
 
       const result = await pool.query(
         `UPDATE users 
-       SET name = COALESCE($1, name), 
-           email = COALESCE($2, email), 
-           password = COALESCE($3, password),
-           bio = COALESCE($4, bio),
-           profile_pic = COALESCE($5, profile_pic)
-       WHERE id = $6 RETURNING id, name, email, bio, profile_pic`,
+         SET name = COALESCE($1, name), 
+             email = COALESCE($2, email), 
+             password = COALESCE($3, password),
+             bio = COALESCE($4, bio),
+             profile_pic = COALESCE($5, profile_pic, '/uploads/dummy-profile-pic-1.jpg')
+         WHERE id = $6 RETURNING id, name, email, bio, profile_pic`,
         [name, email, hashedPassword, bio, profilePicPath, userId]
       );
       res

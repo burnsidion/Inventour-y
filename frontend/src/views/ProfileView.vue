@@ -256,12 +256,9 @@ const saveProfilePic = async () => {
 };
 
 const getProfilePicUrl = (path) => {
-  if (selectedFile.value) {
-    return URL.createObjectURL(selectedFile.value);
-  }
   return path && path.startsWith('/uploads')
     ? `http://localhost:5002${path}`
-    : 'https://via.placeholder.com/100';
+    : `http://localhost:5002/uploads/dummy-profile-pic-1.jpg`;
 };
 
 onMounted(async () => {
