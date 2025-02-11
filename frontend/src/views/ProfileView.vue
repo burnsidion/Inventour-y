@@ -5,7 +5,7 @@
       <div class="flex flex-col items-center">
         <!-- Profile Picture -->
         <img
-          :src="getProfilePicUrl(authStore.user?.profile_pic)"
+          :src="previewImage"
           alt="Profile"
           class="w-24 h-24 rounded-full object-cover border-4 border-gray-300"
         />
@@ -145,7 +145,7 @@
 </template>
   
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useTourStore } from '@/stores/tour';
 import axios from 'axios';
@@ -168,6 +168,12 @@ const editing = ref({
   profilePic: false,
 });
 
+const previewImage = computed(() => {
+  return selectedFile.value
+    ? URL.createObjectURL(selectedFile.value)
+    : getProfilePicUrl(authStore.user?.profile_pic);
+});
+
 const toggleEdit = (section) => {
   if (!editing.value[section]) {
     if (section === 'profilePic') {
@@ -186,6 +192,7 @@ const cancelEdit = (section) => {
   if (currentValues.value[section] !== undefined) {
     if (section === 'profilePic') {
       profilePic.value = currentValues.value[section];
+      selectedFile.value = null;
     } else if (section === 'username') {
       userName.value = currentValues.value[section];
     } else if (section === 'bio') {
@@ -240,6 +247,8 @@ const saveProfilePic = async () => {
 
     profilePic.value = response.data.user.profile_pic;
     selectedFile.value = null;
+
+    authStore.user.profile_pic = response.data.user.profile_pic;
   } catch (error) {
     console.error('Failed to upload profile picture:', error);
     alert('Could not update profile picture. Try again.');
@@ -247,6 +256,9 @@ const saveProfilePic = async () => {
 };
 
 const getProfilePicUrl = (path) => {
+  if (selectedFile.value) {
+    return URL.createObjectURL(selectedFile.value);
+  }
   return path && path.startsWith('/uploads')
     ? `http://localhost:5002${path}`
     : 'https://via.placeholder.com/100';
@@ -256,7 +268,7 @@ onMounted(async () => {
   await authStore.fetchUserData();
   userName.value = authStore.user?.name || 'Unknown User';
   userEmail.value = authStore.user?.email || 'No email found';
-  profilePic.value = authStore.user?.profilePic || 'https://via.placeholder.com/100';
+  profilePic.value = authStore.user?.profile_pic || 'https://via.placeholder.com/100';
   bio.value = authStore.user?.bio || '';
   await tourStore.fetchTours();
   pastTours.value = tourStore.tours.filter((tour) => tour.user_id === authStore.user.id);

@@ -3,10 +3,17 @@ import pool from "../utils/database.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import multer from "multer";
+import fs from "fs";
 import path from "path";
 
 import { authenticateToken } from "../middleware/authenticateToken.js";
 import { authorizeRole } from "../middleware/authorizeRole.js";
+
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const router = express.Router();
 
@@ -76,35 +83,59 @@ router.post("/users", async (req, res) => {
   }
 });
 
-router.put("/users", authenticateToken, async (req, res) => {
-  const { name, email, password, bio } = req.body;
-  const userId = req.user.id;
+router.put(
+  "/users",
+  authenticateToken,
+  upload.single("profilePic"),
+  async (req, res) => {
+    const { name, email, password, bio } = req.body;
+    const userId = req.user.id;
 
-  try {
-    let hashedPassword = null;
-    if (password) {
-      const saltRounds = 10;
-      hashedPassword = await bcrypt.hash(password, saltRounds);
-    }
+    try {
+      let profilePicPath = null;
 
-    const result = await pool.query(
-      `UPDATE users 
+      const userResult = await pool.query(
+        "SELECT profile_pic FROM users WHERE id = $1",
+        [userId]
+      );
+      const currentProfilePic = userResult.rows[0]?.profile_pic;
+
+      if (currentProfilePic && currentProfilePic.startsWith("/uploads")) {
+        const oldFilePath = path.join(__dirname, "..", currentProfilePic);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
+      }
+
+      if (req.file) {
+        profilePicPath = `/uploads/${req.file.filename}`;
+      }
+
+      let hashedPassword = null;
+      if (password) {
+        const saltRounds = 10;
+        hashedPassword = await bcrypt.hash(password, saltRounds);
+      }
+
+      const result = await pool.query(
+        `UPDATE users 
        SET name = COALESCE($1, name), 
            email = COALESCE($2, email), 
            password = COALESCE($3, password),
-           bio = COALESCE($4, bio)
-       WHERE id = $5 RETURNING id, name, email, bio, profile_pic`,
-      [name, email, hashedPassword, bio, userId]
-    );
-
-    res
-      .status(200)
-      .json({ message: "User updated successfully", user: result.rows[0] });
-  } catch (error) {
-    console.error("Error updating user:", error);
-    res.status(500).json({ error: "Failed to update user" });
+           bio = COALESCE($4, bio),
+           profile_pic = COALESCE($5, profile_pic)
+       WHERE id = $6 RETURNING id, name, email, bio, profile_pic`,
+        [name, email, hashedPassword, bio, profilePicPath, userId]
+      );
+      res
+        .status(200)
+        .json({ message: "User updated successfully", user: result.rows[0] });
+    } catch (error) {
+      console.error("❌ Error updating user:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
   }
-});
+);
 
 router.delete(
   "/users",
