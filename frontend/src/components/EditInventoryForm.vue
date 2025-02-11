@@ -4,7 +4,14 @@
     :class="{ 'disable-hover': modalOpen }"
   >
     <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-      <h2 class="text-xl font-bold text-center">Edit {{ inventoryItem.name }}</h2>
+      <h2 class="text-xl font-bold text-center">
+        <input
+          v-model="newItemName"
+          type="text"
+          class="w-full p-2 border rounded"
+          :placeholder="inventoryItem.name"
+        />
+      </h2>
 
       <form @submit.prevent="updateInventory">
         <div class="mb-4">
@@ -30,9 +37,12 @@
           </div>
         </div>
 
-        <div class="flex justify-between mt-4">
+        <div class="flex justify-between mt-4 gap-1">
           <button type="button" @click="$emit('close')" class="btn btn-secondary">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button @click="deleteItem(itemId)" class="btn btn-error text-white">
+            🗑 Delete Item
+          </button>
         </div>
       </form>
     </div>
@@ -41,6 +51,12 @@
   
 <script setup>
 import { ref, watch } from 'vue';
+import { useInventoryStore } from '@/stores/inventory';
+
+const inventoryStore = useInventoryStore();
+
+const { deleteInventoryItem } = inventoryStore;
+
 const props = defineProps({
   inventoryItem: {
     type: Object,
@@ -54,6 +70,9 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'save']);
 
+const itemId = props.inventoryItem.id;
+
+const newItemName = ref('');
 const updatedItem = ref({});
 const updatedPrice = ref('');
 const updatedSizes = ref([]);
@@ -68,6 +87,7 @@ watch(
 
     updatedItem.value = { ...newVal };
     updatedPrice.value = newVal.price || '';
+    newItemName.value = newVal.name;
 
     if (newVal.type === 'soft' && Array.isArray(newVal.sizes)) {
       updatedSizes.value = newVal.sizes.map((sizeObj) => ({
@@ -87,7 +107,7 @@ watch(
 const updateInventory = () => {
   const updatedData = {
     id: props.inventoryItem.id,
-    name: updatedItem.value.name,
+    name: newItemName.value,
     price: updatedPrice.value,
   };
 
@@ -103,5 +123,19 @@ const updateInventory = () => {
   }
 
   emit('save', updatedData);
+};
+
+const deleteItem = async (itemId) => {
+  if (!itemId) {
+    console.error('❌ Item ID is undefined. Cannot proceed with deletion.');
+    return;
+  }
+  const confirmed = confirm('Are you sure you want to delete this item?');
+  if (!confirmed) return;
+
+  const success = await deleteInventoryItem(itemId);
+  if (!success) {
+    alert('Failed to delete item, please try again');
+  }
 };
 </script>
