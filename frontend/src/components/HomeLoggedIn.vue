@@ -84,9 +84,9 @@
               <router-link :to="`/tours/${tour.id}/inventory`" class="btn btn-secondary flex-1">
                 📦 View Inventory
               </router-link>
-              <button @click="tourStore.deleteTour(tour.id)" class="btn btn-error flex-1">
-                🗑 Delete Tour
-              </button>
+              <router-link :to="`/tours/${tour.id}/edit`" class="btn btn-error flex-1">
+                📝 Edit Tour
+              </router-link>
             </div>
           </div>
         </template>
@@ -148,7 +148,7 @@ const formatTourDate = (dateString) => {
 };
 
 const createTour = () => {
-  router.push('/create-tour');
+  router.push('/tours/create');
 };
 
 const expandShows = (tourId) => {
