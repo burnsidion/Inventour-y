@@ -29,10 +29,28 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
   };
 
-  const addInventoryItem = async (newItem) => {
+  const addInventoryItem = async (newItem, tourId) => {
     try {
       const authStore = useAuthStore();
       const token = authStore.token;
+
+      const existingInventoryResponse = await axios.get(
+        `http://localhost:5002/api/inventory?tour_id=${tourId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      const duplicateItem = existingInventoryResponse.data.find(
+        (item) =>
+          item.name.toLowerCase().trim() === newItem.name.toLowerCase().trim() &&
+          item.type === newItem.type,
+      );
+
+      if (duplicateItem) {
+        alert(
+          `An item with name "${newItem.name}" already exists in inventory. Please edit the name so that this is recorded as a new item. To edit already existing inventory, press the 'edit' button on the inventory card.`,
+        );
+        return;
+      }
 
       if (newItem.type === 'soft' && newItem.sizes) {
         newItem.sizes = Object.entries(newItem.sizes).map(([size, quantity]) => ({

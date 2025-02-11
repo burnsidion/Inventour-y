@@ -85,7 +85,7 @@ const submitInventory = async () => {
     price: price.value,
   };
 
-  const success = await inventoryStore.addInventoryItem(payload);
+  const success = await inventoryStore.addInventoryItem(payload, payload.tour_id);
 
   if (success) {
     router.push(`/tours/${route.query.tour_id}/inventory`);
