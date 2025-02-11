@@ -94,19 +94,26 @@ router.put(
     try {
       let profilePicPath = null;
 
+      // Fetch current profile picture
       const userResult = await pool.query(
         "SELECT profile_pic FROM users WHERE id = $1",
         [userId]
       );
       const currentProfilePic = userResult.rows[0]?.profile_pic;
 
-      if (currentProfilePic && currentProfilePic.startsWith("/uploads")) {
+      // Check if current profile picture is NOT the default one before deleting
+      if (
+        currentProfilePic &&
+        currentProfilePic.startsWith("/uploads") &&
+        !currentProfilePic.includes("dummy-profile-pic-1.jpg") // Prevent deletion of default pic
+      ) {
         const oldFilePath = path.join(__dirname, "..", currentProfilePic);
         if (fs.existsSync(oldFilePath)) {
           fs.unlinkSync(oldFilePath);
         }
       }
 
+      // Handle new uploaded file
       if (req.file) {
         profilePicPath = `/uploads/${req.file.filename}`;
       }
@@ -127,6 +134,7 @@ router.put(
          WHERE id = $6 RETURNING id, name, email, bio, profile_pic`,
         [name, email, hashedPassword, bio, profilePicPath, userId]
       );
+
       res
         .status(200)
         .json({ message: "User updated successfully", user: result.rows[0] });

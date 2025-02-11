@@ -155,7 +155,7 @@ const tourStore = useTourStore();
 
 const userName = ref('');
 const userEmail = ref('');
-const profilePic = ref('https://via.placeholder.com/100');
+const profilePic = ref('http://localhost:5002/uploads/dummy-profile-pic-1.jpg');
 const bio = ref('');
 const currentValues = ref({});
 const pastTours = ref(['Tour A - 2023', 'Tour B - 2022']);
@@ -233,39 +233,21 @@ const handleFileUpload = (event) => {
 
 const saveProfilePic = async () => {
   if (!selectedFile.value) return;
-
-  const formData = new FormData();
-  formData.append('profilePic', selectedFile.value);
-
-  try {
-    const response = await axios.put('http://localhost:5002/api/users', formData, {
-      headers: {
-        Authorization: `Bearer ${authStore.token}`,
-        'Content-Type': undefined,
-      },
-    });
-
-    profilePic.value = response.data.user.profile_pic;
-    selectedFile.value = null;
-
-    authStore.user.profile_pic = response.data.user.profile_pic;
-  } catch (error) {
-    console.error('Failed to upload profile picture:', error);
-    alert('Could not update profile picture. Try again.');
-  }
+  await authStore.saveProfilePic(selectedFile.value);
 };
 
 const getProfilePicUrl = (path) => {
   return path && path.startsWith('/uploads')
     ? `http://localhost:5002${path}`
-    : `http://localhost:5002/uploads/dummy-profile-pic-1.jpg`;
+    : 'http://localhost:5002/uploads/dummy-profile-pic-1.jpg';
 };
 
 onMounted(async () => {
   await authStore.fetchUserData();
   userName.value = authStore.user?.name || 'Unknown User';
   userEmail.value = authStore.user?.email || 'No email found';
-  profilePic.value = authStore.user?.profile_pic || 'https://via.placeholder.com/100';
+  profilePic.value =
+    authStore.user?.profile_pic || 'http://localhost:5002/uploads/dummy-profile-pic-1.jpg';
   bio.value = authStore.user?.bio || '';
   await tourStore.fetchTours();
   pastTours.value = tourStore.tours.filter((tour) => tour.user_id === authStore.user.id);
