@@ -111,6 +111,20 @@ const updateInventory = () => {
     price: updatedPrice.value,
   };
 
+  const duplicateItem = inventoryStore.inventory.find(
+    (item) =>
+      item.name.toLowerCase().trim() === updatedData.name.toLowerCase() &&
+      item.type === props.inventoryItem.type &&
+      item.id !== props.inventoryItem.id
+  );
+
+  if (duplicateItem) {
+    alert(
+      `An item with the name "${updatedData.name}" already exists in inventory. Please choose a different name.`
+    );
+    return;
+  }
+
   if (props.inventoryItem.type === 'soft') {
     updatedData.sizes = updatedSizes.value.map((sizeObj, index) => ({
       size: sizeObj.size,
