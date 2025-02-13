@@ -826,4 +826,136 @@ router.get("/sales/tour", authenticateToken, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch total sales for tour" });
   }
 });
+
+router.post("/sales/bundle", authenticateToken, async (req, res) => {
+  const { bundle_id, quantity_sold, show_id } = req.body;
+
+  if (!bundle_id || !quantity_sold || !show_id) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    await pool.query("BEGIN");
+
+    // Get items in the bundle
+    const bundleItems = await pool.query(
+      `SELECT item_id, quantity FROM bundle_items WHERE bundle_id = $1`,
+      [bundle_id]
+    );
+
+    if (bundleItems.rows.length === 0) {
+      return res.status(404).json({ error: "No items found in bundle" });
+    }
+
+    // Deduct stock for each item
+    for (const { item_id, quantity } of bundleItems.rows) {
+      await pool.query(
+        `UPDATE inventory SET quantity = quantity - ($1 * $2) 
+         WHERE id = $3 AND quantity >= ($1 * $2)`,
+        [quantity_sold, quantity, item_id]
+      );
+    }
+
+    // Log the sale
+    await pool.query(
+      `INSERT INTO sales (inventory_id, quantity_sold, total_amount, payment_method, show_id) 
+       VALUES ($1, $2, (SELECT price FROM inventory WHERE id = $1) * $2, 'cash', $3)`,
+      [bundle_id, quantity_sold, show_id]
+    );
+
+    await pool.query("COMMIT");
+
+    res.status(200).json({ message: "Bundle sold successfully" });
+  } catch (error) {
+    await pool.query("ROLLBACK");
+    console.error("Error selling bundle:", error);
+    res.status(500).json({ error: "Failed to sell bundle" });
+  }
+});
+
+//Bundle routes
+router.post("/inventory/bundles", authenticateToken, async (req, res) => {
+  const { name, price, items } = req.body;
+  const { tour_id } = req.query;
+
+  if (
+    !name ||
+    !price ||
+    !tour_id ||
+    !Array.isArray(items) ||
+    items.length === 0
+  ) {
+    return res
+      .status(400)
+      .json({ error: "Missing required fields or invalid items array" });
+  }
+
+  try {
+    await pool.query("BEGIN");
+
+    const bundleResult = await pool.query(
+      `INSERT INTO inventory (name, type, price, tour_id) 
+       VALUES ($1, 'bundle', $2, $3) RETURNING id`,
+      [name, price, tour_id]
+    );
+
+    if (!bundleResult.rows.length) {
+      throw new Error("Failed to insert bundle into inventory");
+    }
+
+    const bundleId = bundleResult.rows[0].id;
+
+    if (!bundleId) {
+      throw new Error("Bundle ID is undefined");
+    }
+
+    for (const { item_id, quantity } of items) {
+      await pool.query(
+        `INSERT INTO bundle_items (bundle_id, item_id, quantity) 
+         VALUES ($1, $2, $3)`,
+        [bundleId, item_id, quantity]
+      );
+    }
+
+    await pool.query("COMMIT");
+
+    res.status(201).json({ message: "Bundle created", bundleId });
+  } catch (error) {
+    await pool.query("ROLLBACK");
+    console.error("Error creating bundle:", error);
+    res.status(500).json({ error: "Failed to create bundle" });
+  }
+});
+
+router.get(
+  "/inventory/bundles/:bundle_id",
+  authenticateToken,
+  async (req, res) => {
+    const { bundle_id } = req.params;
+
+    try {
+      const bundleResult = await pool.query(
+        `SELECT * FROM inventory WHERE id = $1 AND type = 'bundle'`,
+        [bundle_id]
+      );
+
+      if (bundleResult.rows.length === 0) {
+        return res.status(404).json({ error: "Bundle not found" });
+      }
+
+      const itemsResult = await pool.query(
+        `SELECT i.id, i.name, i.type, i.price, i.image_url, bi.quantity 
+       FROM bundle_items bi
+       JOIN inventory i ON bi.item_id = i.id
+       WHERE bi.bundle_id = $1`,
+        [bundle_id]
+      );
+
+      res.json({ bundle: bundleResult.rows[0], items: itemsResult.rows });
+    } catch (error) {
+      console.error("Error fetching bundle:", error);
+      res.status(500).json({ error: "Failed to fetch bundle" });
+    }
+  }
+);
 export default router;
