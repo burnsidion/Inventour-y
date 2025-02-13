@@ -76,7 +76,7 @@ const newItemName = ref('');
 const updatedItem = ref({});
 const updatedPrice = ref('');
 const updatedSizes = ref([]);
-const addedQuantity = ref([]);
+const addedQuantity = ref(0);
 
 watch(
   () => props.inventoryItem,
@@ -120,6 +120,7 @@ const updateInventory = () => {
     id: props.inventoryItem.id,
     name: newItemName.value.trim(),
     price: updatedPrice.value,
+    quantity: props.inventoryItem.quantity + addedQuantity.value,
   };
 
   emit('save', updatedData);

@@ -6,6 +6,7 @@
       :modalOpen="modalOpen"
       @close="modalOpen = false"
       @itemDeleted="handleItemDeleted"
+      @save="handleSaveChanges"
     />
 
     <div class="flex flex-col gap-1">
@@ -81,7 +82,7 @@ import EditInventoryForm from './EditInventoryForm.vue';
 
 const route = useRoute();
 const inventoryStore = useInventoryStore();
-const { fetchInventory } = inventoryStore;
+const { fetchInventory, saveInventoryChanges } = inventoryStore;
 
 const expanded = ref(true);
 const editingItem = ref(null);
@@ -91,6 +92,7 @@ const isLoading = ref(true);
 fetchInventory(route.params.id).finally(() => {
   isLoading.value = false;
 });
+
 const hardItemsList = computed(() =>
   inventoryStore.inventory.filter((item) => item.type === 'hard')
 );
@@ -98,9 +100,24 @@ const hardItemsList = computed(() =>
 const lowStockAlert = (quantity) => {
   return quantity < 30;
 };
+
 const formattedPrice = (price) => {
   const numPrice = parseFloat(price);
   return !isNaN(numPrice) ? numPrice.toFixed(2) : 'N/A';
+};
+
+const handleSaveChanges = async (updatedData) => {
+  const completeData = {
+    ...updatedData,
+    quantity: updatedData.quantity ?? editingItem.value?.quantity ?? 0,
+  };
+
+  editingItem.value = null;
+  modalOpen.value = false;
+  const success = await saveInventoryChanges(completeData, route.params.id);
+  if (!success) {
+    alert('Failed to update item, please try again');
+  }
 };
 
 const toggleEditForm = (item) => {
