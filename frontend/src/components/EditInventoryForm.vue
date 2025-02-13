@@ -68,7 +68,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['close', 'save']);
+const emit = defineEmits(['close', 'save', 'itemDeleted']);
 
 const itemId = props.inventoryItem.id;
 
@@ -81,7 +81,8 @@ const addedQuantity = ref([]);
 watch(
   () => props.inventoryItem,
   (newVal) => {
-    if (!newVal || !newVal.name) {
+    if (!newVal || !newVal.id) {
+      console.warn('🚨 inventoryItem is null or deleted, skipping update.');
       return;
     }
 
@@ -105,50 +106,41 @@ watch(
 );
 
 const updateInventory = () => {
-  const updatedData = {
-    id: props.inventoryItem.id,
-    name: newItemName.value,
-    price: updatedPrice.value,
-  };
-
-  const duplicateItem = inventoryStore.inventory.find(
-    (item) =>
-      item.name.toLowerCase().trim() === updatedData.name.toLowerCase() &&
-      item.type === props.inventoryItem.type &&
-      item.id !== props.inventoryItem.id
-  );
-
-  if (duplicateItem) {
-    alert(
-      `An item with the name "${updatedData.name}" already exists in inventory. Please choose a different name.`
-    );
+  if (!props.inventoryItem || !props.inventoryItem.id) {
+    console.warn('🚨 Cannot update: item no longer exists in inventory.');
     return;
   }
 
-  if (props.inventoryItem.type === 'soft') {
-    updatedData.sizes = updatedSizes.value.map((sizeObj, index) => ({
-      size: sizeObj.size,
-      new_quantity: sizeObj.newStock + (addedQuantity.value[index] || 0),
-    }));
+  if (!newItemName.value.trim() || !updatedPrice.value) {
+    alert('🚨 Name and Price are required!');
+    return;
   }
 
-  if (props.inventoryItem.type === 'hard') {
-    updatedData.quantity = (props.inventoryItem.quantity || 0) + addedQuantity.value;
-  }
+  const updatedData = {
+    id: props.inventoryItem.id,
+    name: newItemName.value.trim(),
+    price: updatedPrice.value,
+  };
 
   emit('save', updatedData);
 };
 
 const deleteItem = async (itemId) => {
-  if (!itemId) {
-    console.error('❌ Item ID is undefined. Cannot proceed with deletion.');
+  const tourId = props.inventoryItem.tour_id;
+  if (!tourId) {
+    console.error('❌ Cannot delete item: tourId is missing.');
     return;
   }
+
   const confirmed = confirm('Are you sure you want to delete this item?');
   if (!confirmed) return;
 
-  const success = await deleteInventoryItem(itemId);
-  if (!success) {
+  const success = await deleteInventoryItem(itemId, tourId);
+  if (success) {
+    emit('itemDeleted');
+
+    emit('close');
+  } else {
     alert('Failed to delete item, please try again');
   }
 };

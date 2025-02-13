@@ -125,10 +125,8 @@ const isEditing = computed(() => {
 
 const handleSubmit = async (tourData) => {
   if (isEditing.value) {
-    console.log('update');
     await tourStore.updateTour(tourId, tourData);
   } else {
-    console.log('create');
     await tourStore.createTour(tourData);
   }
   router.push('/');

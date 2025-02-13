@@ -7,6 +7,11 @@ export const useInventoryStore = defineStore('inventory', () => {
   const inventory = ref([]);
 
   const fetchInventory = async (tourId) => {
+    if (!tourId) {
+      console.error('❌ Error: fetchInventory called with undefined tourId');
+      return;
+    }
+    console.log('✅ Fetching inventory for tour:', tourId);
     try {
       const authStore = useAuthStore();
       const token = authStore.token;
@@ -15,15 +20,9 @@ export const useInventoryStore = defineStore('inventory', () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      inventory.value = response.data.map((item) => ({
-        id: item.id,
-        name: item.name,
-        type: item.type,
-        price: item.price,
-        image_url: item.image_url,
-        quantity: item.type === 'hard' ? item.quantity || 0 : null,
-        sizes: item.type === 'soft' ? item.sizes || [] : [],
-      }));
+      let inventoryData = response.data;
+
+      inventory.value = inventoryData.filter((item) => !!item);
     } catch (error) {
       console.error('❌ Error fetching inventory:', error.response?.data || error);
     }
@@ -34,48 +33,67 @@ export const useInventoryStore = defineStore('inventory', () => {
       const authStore = useAuthStore();
       const token = authStore.token;
 
-      const existingInventoryResponse = await axios.get(
-        `http://localhost:5002/api/inventory?tour_id=${tourId}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      let response;
 
-      const duplicateItem = existingInventoryResponse.data.find(
-        (item) =>
-          item.name.toLowerCase().trim() === newItem.name.toLowerCase().trim() &&
-          item.type === newItem.type,
-      );
-
-      if (duplicateItem) {
-        alert(
-          `An item with name "${newItem.name}" already exists in inventory. Please edit the name so that this is recorded as a new item. To edit already existing inventory, press the 'edit' button on the inventory card.`,
+      if (newItem.type === 'bundle') {
+        response = await axios.post(
+          `http://localhost:5002/api/inventory/bundles?tour_id=${tourId}`,
+          newItem,
+          { headers: { Authorization: `Bearer ${token}` } },
         );
-        return;
+
+        if (!response.data || !response.data.bundleId) {
+          throw new Error('Unexpected API response for bundle creation');
+        }
+
+        const bundleId = response.data.bundleId;
+        const bundleResponse = await axios.get(
+          `http://localhost:5002/api/inventory/bundles/${bundleId}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+
+        if (!bundleResponse.data || !bundleResponse.data.bundle) {
+          throw new Error('Failed to retrieve newly created bundle');
+        }
+
+        const newBundle = {
+          ...bundleResponse.data.bundle,
+          items: bundleResponse.data.items || [],
+          quantity: response.data.quantity || 0,
+        };
+
+        inventory.value.push(newBundle);
+        return newBundle;
       }
 
-      if (newItem.type === 'soft' && newItem.sizes) {
-        newItem.sizes = Object.entries(newItem.sizes).map(([size, quantity]) => ({
-          size,
-          quantity,
-        }));
-      }
-
-      const response = await axios.post('http://localhost:5002/api/inventory', newItem, {
+      response = await axios.post(`http://localhost:5002/api/inventory`, newItem, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      inventory.value.push({
+      if (!response.data || !response.data.inventory) {
+        throw new Error('Unexpected API response for inventory creation');
+      }
+
+      const newInventoryItem = {
         ...response.data.inventory,
         sizes: response.data.inventory.sizes || [],
         quantity: response.data.inventory.quantity || 0,
-      });
+      };
 
-      return response.data.inventory;
+      inventory.value.push(newInventoryItem);
+      return newInventoryItem;
     } catch (error) {
       console.error('❌ Error adding inventory:', error.response?.data || error);
+      return null;
     }
   };
 
   const updateInventoryItem = async (updatedItem) => {
+    if (!updatedItem || !updatedItem.id) {
+      console.warn('🚨 Invalid update request, missing item ID');
+      return false;
+    }
+
     try {
       const authStore = useAuthStore();
       const token = authStore.token;
@@ -96,7 +114,8 @@ export const useInventoryStore = defineStore('inventory', () => {
 
       return response.data;
     } catch (error) {
-      console.error('❌ Error updating inventory:', error.response?.data || error);
+      console.error('❌ ERROR UPDATING INVENTORY:', error.response?.data || error);
+      return false;
     }
   };
 
@@ -105,52 +124,42 @@ export const useInventoryStore = defineStore('inventory', () => {
       const authStore = useAuthStore();
       const token = authStore.token;
 
-      await axios.delete(`http://localhost:5002/api/inventory/${itemId}`, {
+      const response = await axios.delete(`http://localhost:5002/api/inventory/${itemId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (response.status !== 200) {
+        console.error(`❌ DELETE request failed with status: ${response.status}`);
+        return false;
+      }
 
       inventory.value = inventory.value.filter((item) => item.id !== itemId);
 
       return true;
     } catch (error) {
-      console.error('❌ Error deleting inventory item:', error.response?.data || error);
+      console.error(`❌ ERROR deleting inventory item ${itemId}:`, error.response?.data || error);
       return false;
     }
   };
 
-  const editInventoryItem = async (updatedItem) => {
-    try {
-      const authStore = useAuthStore();
-      const token = authStore.token;
-
-      const response = await axios.put(
-        `http://localhost:5002/api/inventory/${updatedItem.id}`,
-        updatedItem,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-
-      const index = inventory.value.findIndex((item) => item.id === updatedItem.id);
-      if (index !== -1) {
-        inventory.value[index] = {
-          ...response.data,
-          sizes: response.data.sizes || [],
-          quantity: response.data.quantity || 0,
-        };
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error editing inventory item:', error.response?.data || error);
-    }
-  };
-
   const saveInventoryChanges = async (updatedData, tourId) => {
+    if (!updatedData || !updatedData.id) {
+      console.warn('Skipping saveInventoryChanges: No valid updatedData');
+      return false;
+    }
+
+    const existingItem = inventory.value.find((item) => item.id === updatedData.id);
+    if (!existingItem) {
+      console.warn(`🚨 Skipping update: item ${updatedData.id} was deleted.`);
+      return false;
+    }
+
     try {
-      await editInventoryItem(updatedData);
+      await updateInventoryItem(updatedData);
       await fetchInventory(tourId);
       return true;
     } catch (error) {
-      console.error('❌ Error saving inventory changes:', error.response?.data || error);
+      console.error('❌ Error saving inventory changes:', error);
       return false;
     }
   };
@@ -161,7 +170,6 @@ export const useInventoryStore = defineStore('inventory', () => {
     addInventoryItem,
     updateInventoryItem,
     deleteInventoryItem,
-    editInventoryItem,
     saveInventoryChanges,
   };
 });

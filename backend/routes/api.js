@@ -69,7 +69,6 @@ router.post("/users", async (req, res) => {
 
     const user = result.rows[0];
 
-    // Generate JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -94,18 +93,16 @@ router.put(
     try {
       let profilePicPath = null;
 
-      // Fetch current profile picture
       const userResult = await pool.query(
         "SELECT profile_pic FROM users WHERE id = $1",
         [userId]
       );
       const currentProfilePic = userResult.rows[0]?.profile_pic;
 
-      // Check if current profile picture is NOT the default one before deleting
       if (
         currentProfilePic &&
         currentProfilePic.startsWith("/uploads") &&
-        !currentProfilePic.includes("dummy-profile-pic-1.jpg") // Prevent deletion of default pic
+        !currentProfilePic.includes("dummy-profile-pic-1.jpg")
       ) {
         const oldFilePath = path.join(__dirname, "..", currentProfilePic);
         if (fs.existsSync(oldFilePath)) {
@@ -113,7 +110,6 @@ router.put(
         }
       }
 
-      // Handle new uploaded file
       if (req.file) {
         profilePicPath = `/uploads/${req.file.filename}`;
       }
@@ -358,37 +354,6 @@ router.get("/shows", authenticateToken, async (req, res) => {
   }
 });
 
-// router.get("/inventory", authenticateToken, async (req, res) => {
-//   try {
-//     console.log("this route called in the show routes");
-//     const { id: userId } = req.user;
-
-//     const result = await pool.query(
-//       `SELECT
-//               inventory.id,
-//               inventory.name,
-//               inventory.type,
-//               inventory.price,
-//               inventory.image_url,
-//               inventory.created_at,
-//               inventory.tour_id,
-//               json_agg(
-//                   json_build_object('size', inventory_sizes.size, 'quantity', inventory_sizes.quantity)
-//               ) AS sizes
-//            FROM inventory
-//            LEFT JOIN inventory_sizes ON inventory.id = inventory_sizes.inventory_id
-//            WHERE inventory.tour_id IN (SELECT id FROM tours WHERE user_id = $1)
-//            GROUP BY inventory.id;`,
-//       [userId]
-//     );
-
-//     res.status(200).json(result.rows);
-//   } catch (error) {
-//     console.error("Error fetching inventory:", error);
-//     res.status(500).json({ error: "Failed to fetch inventory" });
-//   }
-// });
-
 router.get("/shows/:id", authenticateToken, async (req, res) => {
   const showId = req.params.id;
 
@@ -414,10 +379,9 @@ router.get("/shows/:id", authenticateToken, async (req, res) => {
 
 router.delete("/shows/:id", authenticateToken, async (req, res) => {
   const showId = req.params.id;
-  const userId = req.user.id; // Get user ID from token
+  const userId = req.user.id;
 
   try {
-    // Check if the show exists and belongs to a tour owned by this user
     const showCheck = await pool.query(
       `SELECT shows.id FROM shows
        JOIN tours ON shows.tour_id = tours.id
@@ -431,7 +395,6 @@ router.delete("/shows/:id", authenticateToken, async (req, res) => {
         .json({ error: "Show not found or unauthorized to delete." });
     }
 
-    // Delete the show
     await pool.query("DELETE FROM shows WHERE id = $1", [showId]);
 
     res.status(200).json({ message: "Show deleted successfully." });
@@ -456,7 +419,6 @@ router.post("/inventory", authenticateToken, async (req, res) => {
   }
 
   try {
-    // If hard item, store quantity in inventory table directly
     const inventoryResult = await pool.query(
       `INSERT INTO inventory (name, type, price, image_url, tour_id, quantity)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
@@ -524,13 +486,12 @@ router.get("/inventory", authenticateToken, async (req, res) => {
 
           return {
             ...item,
-            sizes: sizesResult.rows, // Correctly return sizes for soft items
+            sizes: sizesResult.rows,
           };
         } else {
-          // Ensure hard items return `quantity` at the top level
           return {
             ...item,
-            quantity: item.quantity, // Keep quantity here
+            quantity: item.quantity,
           };
         }
       })
@@ -580,7 +541,6 @@ router.put("/inventory/:id", authenticateToken, async (req, res) => {
   const { name, type, price, image_url, quantity, sizes } = req.body;
 
   try {
-    // Fetch item to determine if it's 'soft' or 'hard'
     const itemResult = await pool.query(
       "SELECT type FROM inventory WHERE id = $1",
       [id]
@@ -592,23 +552,19 @@ router.put("/inventory/:id", authenticateToken, async (req, res) => {
 
     const itemType = itemResult.rows[0].type;
 
-    // Start transaction
     await pool.query("BEGIN");
 
-    // Update the inventory table (applies to both hard and soft items)
     await pool.query(
       `UPDATE inventory SET name = $1, price = $2, image_url = $3 WHERE id = $4`,
       [name, price, image_url, id]
     );
 
     if (itemType === "hard") {
-      // Update quantity in inventory table
       await pool.query(`UPDATE inventory SET quantity = $1 WHERE id = $2`, [
         quantity,
         id,
       ]);
     } else if (itemType === "soft" && sizes) {
-      // Update each size in inventory_sizes table
       for (const size of sizes) {
         await pool.query(
           `UPDATE inventory_sizes SET quantity = $1 WHERE inventory_id = $2 AND size = $3`,
@@ -617,14 +573,16 @@ router.put("/inventory/:id", authenticateToken, async (req, res) => {
       }
     }
 
-    // Commit transaction
     await pool.query("COMMIT");
 
-    // Fetch updated item for response
     const updatedItemResult = await pool.query(
       `SELECT id, name, type, price, image_url, tour_id, quantity FROM inventory WHERE id = $1`,
       [id]
     );
+
+    if (updatedItemResult.rows.length === 0) {
+      return res.status(404).json({ error: "Failed to fetch updated item" });
+    }
 
     const updatedItem = updatedItemResult.rows[0];
 
@@ -633,7 +591,7 @@ router.put("/inventory/:id", authenticateToken, async (req, res) => {
         `SELECT size, quantity FROM inventory_sizes WHERE inventory_id = $1`,
         [id]
       );
-      updatedItem.sizes = sizesResult.rows;
+      updatedItem.sizes = sizesResult.rows; // ✅ Only sets sizes if updatedItem is valid
     }
 
     res.json({ message: "Inventory item updated", inventory: updatedItem });
@@ -646,44 +604,50 @@ router.put("/inventory/:id", authenticateToken, async (req, res) => {
 
 router.delete("/inventory/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
-  try {
-    await pool.query("BEGIN");
 
+  try {
+    await pool.query("BEGIN"); // Start transaction
+
+    // Lock the inventory item to prevent concurrent modifications
     const itemResult = await pool.query(
-      "SELECT type FROM inventory WHERE id = $1",
+      "SELECT type FROM inventory WHERE id = $1 FOR UPDATE",
       [id]
     );
 
     if (itemResult.rows.length === 0) {
+      await pool.query("ROLLBACK");
       return res.status(404).json({ error: "Item not found" });
     }
 
     const itemType = itemResult.rows[0].type;
 
+    // First, delete related sizes if it's a soft item
     if (itemType === "soft") {
       await pool.query("DELETE FROM inventory_sizes WHERE inventory_id = $1", [
         id,
       ]);
     }
 
+    // Then delete the inventory item itself
     const deleteResult = await pool.query(
       "DELETE FROM inventory WHERE id = $1 RETURNING *",
       [id]
     );
 
     if (deleteResult.rows.length === 0) {
-      throw new Error("Failed to delete inventory item");
+      await pool.query("ROLLBACK");
+      return res.status(404).json({ error: "Failed to delete item" });
     }
 
-    await pool.query("COMMIT");
+    await pool.query("COMMIT"); // Commit transaction
 
     res.status(200).json({
       message: "Item deleted successfully",
       deletedItem: deleteResult.rows[0],
     });
   } catch (error) {
-    await pool.query("ROLLBACK");
-    console.error("Error deleting item", error);
+    await pool.query("ROLLBACK"); // Rollback if anything fails
+    console.error("❌ Error deleting item:", error);
     res.status(500).json({ error: "Failed to delete item" });
   }
 });
@@ -724,7 +688,6 @@ router.post("/sales", authenticateToken, async (req, res) => {
       adjustedPrice = 0;
     }
 
-    // Decrease inventory quantity
     const inventoryResult = await pool.query(
       `UPDATE inventory
        SET quantity = quantity - $1
@@ -740,7 +703,6 @@ router.post("/sales", authenticateToken, async (req, res) => {
         .json({ error: "Insufficient inventory or invalid inventory ID" });
     }
 
-    // Insert sale into the database, including `show_id`
     const salesResult = await pool.query(
       `INSERT INTO sales (inventory_id, show_id, quantity_sold, total_amount, payment_method)
        VALUES ($1, $2, $3, $4, $5)
@@ -837,7 +799,6 @@ router.post("/sales/bundle", authenticateToken, async (req, res) => {
   try {
     await pool.query("BEGIN");
 
-    // Get items in the bundle
     const bundleItems = await pool.query(
       `SELECT item_id, quantity FROM bundle_items WHERE bundle_id = $1`,
       [bundle_id]
@@ -847,7 +808,6 @@ router.post("/sales/bundle", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: "No items found in bundle" });
     }
 
-    // Deduct stock for each item
     for (const { item_id, quantity } of bundleItems.rows) {
       await pool.query(
         `UPDATE inventory SET quantity = quantity - ($1 * $2) 
@@ -856,7 +816,6 @@ router.post("/sales/bundle", authenticateToken, async (req, res) => {
       );
     }
 
-    // Log the sale
     await pool.query(
       `INSERT INTO sales (inventory_id, quantity_sold, total_amount, payment_method, show_id) 
        VALUES ($1, $2, (SELECT price FROM inventory WHERE id = $1) * $2, 'cash', $3)`,
@@ -894,8 +853,8 @@ router.post("/inventory/bundles", authenticateToken, async (req, res) => {
     await pool.query("BEGIN");
 
     const bundleResult = await pool.query(
-      `INSERT INTO inventory (name, type, price, tour_id) 
-       VALUES ($1, 'bundle', $2, $3) RETURNING id`,
+      `INSERT INTO inventory (name, type, price, tour_id, quantity) 
+       VALUES ($1, 'bundle', $2, $3, 0) RETURNING id`,
       [name, price, tour_id]
     );
 
@@ -909,17 +868,52 @@ router.post("/inventory/bundles", authenticateToken, async (req, res) => {
       throw new Error("Bundle ID is undefined");
     }
 
-    for (const { item_id, quantity } of items) {
+    let bundleQuantities = [];
+
+    for (const { item_id } of items) {
+      const itemQuery = await pool.query(
+        `SELECT type FROM inventory WHERE id = $1`,
+        [item_id]
+      );
+      if (!itemQuery.rows.length) continue;
+
+      const itemType = itemQuery.rows[0].type;
+      let itemQuantity = 0;
+
+      if (itemType === "hard") {
+        const hardItem = await pool.query(
+          `SELECT quantity FROM inventory WHERE id = $1`,
+          [item_id]
+        );
+        itemQuantity = hardItem.rows.length ? hardItem.rows[0].quantity : 0;
+      } else if (itemType === "soft") {
+        const softItemSizes = await pool.query(
+          `SELECT SUM(quantity) AS total_quantity FROM inventory_sizes WHERE inventory_id = $1`,
+          [item_id]
+        );
+        itemQuantity = softItemSizes.rows[0]?.total_quantity || 0;
+      }
+
+      bundleQuantities.push(itemQuantity);
+
       await pool.query(
-        `INSERT INTO bundle_items (bundle_id, item_id, quantity) 
-         VALUES ($1, $2, $3)`,
-        [bundleId, item_id, quantity]
+        `INSERT INTO bundle_items (bundle_id, item_id, quantity) VALUES ($1, $2, $3)`,
+        [bundleId, item_id, itemQuantity]
       );
     }
 
-    await pool.query("COMMIT");
+    const bundleQuantity =
+      bundleQuantities.length > 0 ? Math.min(...bundleQuantities) : 0;
 
-    res.status(201).json({ message: "Bundle created", bundleId });
+    await pool.query(`UPDATE inventory SET quantity = $1 WHERE id = $2`, [
+      bundleQuantity,
+      bundleId,
+    ]);
+
+    await pool.query("COMMIT");
+    res
+      .status(201)
+      .json({ message: "Bundle created", bundleId, quantity: bundleQuantity });
   } catch (error) {
     await pool.query("ROLLBACK");
     console.error("Error creating bundle:", error);
@@ -944,7 +938,14 @@ router.get(
       }
 
       const itemsResult = await pool.query(
-        `SELECT i.id, i.name, i.type, i.price, i.image_url, bi.quantity 
+        `SELECT i.id, i.name, i.type, i.price, i.image_url, bi.quantity,
+              CASE 
+                  WHEN i.type = 'soft' THEN 
+                      (SELECT json_agg(json_build_object('size', s.size, 'quantity', s.quantity)) 
+                       FROM inventory_sizes s 
+                       WHERE s.inventory_id = i.id)
+                  ELSE NULL
+              END AS sizes
        FROM bundle_items bi
        JOIN inventory i ON bi.item_id = i.id
        WHERE bi.bundle_id = $1`,

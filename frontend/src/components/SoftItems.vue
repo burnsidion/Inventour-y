@@ -8,9 +8,7 @@
       @save="handleSaveChanges"
     />
     <div class="flex flex-col gap-1">
-      <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">
-        👕 Soft Items
-      </h2>
+      <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">Soft Items</h2>
       <button @click="expanded = !expanded" class="text-sm text-blue-500 mb-2">
         {{ expanded ? 'Collapse' : 'Expand' }}
       </button>
@@ -18,27 +16,18 @@
 
     <template v-if="!isLoading">
       <template v-if="softItemsList.length > 0">
-        <draggable v-if="expanded" v-model="softItemsList" item-key="name" class="grid gap-4">
+        <draggable
+          v-if="expanded"
+          v-model="softItemsList"
+          item-key="name"
+          class="flex flex-col space-y-4"
+        >
           <template #item="{ element: item }">
             <div
               class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce cursor-move text-[#393f4d]"
             >
               <h3 class="font-semibold">{{ item.name }}</h3>
               <p class="text-gray-600 mb-2">Price: ${{ getSoftItemPrice(item.name) }}</p>
-              <div class="flex justify-between">
-                <button
-                  @click="toggleEditForm(item)"
-                  class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
-                >
-                  📝 Edit Item
-                </button>
-                <button
-                  @click="deleteItem(item.id)"
-                  class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
-                >
-                  🗑 Delete Item
-                </button>
-              </div>
               <table class="w-full border-collapse">
                 <thead>
                   <tr class="border-b border-gray-500">
@@ -66,6 +55,14 @@
                   </tr>
                 </tbody>
               </table>
+              <div class="flex justify-center mt-2">
+                <button
+                  @click="toggleEditForm(item)"
+                  class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
+                >
+                  📝 Edit Item
+                </button>
+              </div>
             </div>
           </template>
         </draggable>
@@ -86,12 +83,8 @@ import { useInventoryStore } from '@/stores/inventory';
 import EditInventoryForm from './EditInventoryForm.vue';
 import draggable from 'vuedraggable';
 
-defineProps({
-  isLoading: Boolean,
-});
-
 const inventoryStore = useInventoryStore();
-const { fetchInventory, deleteInventoryItem, saveInventoryChanges } = inventoryStore;
+const { fetchInventory, saveInventoryChanges } = inventoryStore;
 
 const route = useRoute();
 const tourId = route.params.id;
@@ -99,6 +92,7 @@ const tourId = route.params.id;
 const expanded = ref(true);
 const editingItem = ref(null);
 const modalOpen = ref(false);
+const isLoading = ref(false);
 
 const softItemsList = computed(() => {
   return inventoryStore.inventory.filter((item) => item.type === 'soft');
@@ -125,23 +119,6 @@ const toggleEditForm = (item) => {
 
   editingItem.value = { ...selectedItem, sizes: [...(selectedItem.sizes || [])] };
   modalOpen.value = true;
-};
-
-const deleteItem = async (itemId) => {
-  if (!itemId) {
-    console.error('❌ Item ID is undefined. Cannot proceed with deletion.');
-    return;
-  }
-  const confirmed = confirm('Are you sure you want to delete this item?');
-  if (!confirmed) return;
-
-  const success = await deleteInventoryItem(itemId);
-
-  if (success) {
-    await fetchInventory(tourId);
-  } else {
-    alert('Failed to delete item, please try again');
-  }
 };
 
 const getSoftItemPrice = (name) => {
@@ -172,6 +149,8 @@ const handleSaveChanges = async (updatedData) => {
 };
 
 onMounted(async () => {
-  await fetchInventory(tourId);
+  isLoading.value = true;
+  await fetchInventory(route.params.id);
+  isLoading.value = false;
 });
 </script>

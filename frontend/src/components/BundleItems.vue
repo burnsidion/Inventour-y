@@ -1,15 +1,15 @@
 <template>
   <div>
     <EditInventoryForm
-      v-if="modalOpen"
-      :inventoryItem="editingItem"
-      :modalOpen="modalOpen"
-      @close="modalOpen = false"
-      @itemDeleted="handleItemDeleted"
+      v-if="modalOpen && editingItem"
+      :inventory-item="editingItem"
+      :modal-open="modalOpen"
+      @close="closeEditForm"
+      @save="handleSaveChanges"
     />
 
     <div class="flex flex-col gap-1">
-      <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">Hard Items</h2>
+      <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">Bundles</h2>
       <button @click="expanded = !expanded" class="text-sm text-blue-500 mb-2">
         {{ expanded ? 'Collapse' : 'Expand' }}
       </button>
@@ -18,13 +18,8 @@
     <!-- Only render content if not loading -->
     <template v-if="!isLoading">
       <!-- Check if there are hard items -->
-      <template v-if="hardItemsList.length > 0">
-        <draggable
-          v-if="expanded"
-          v-model="hardItemsList"
-          item-key="id"
-          class="flex flex-col space-y-4"
-        >
+      <template v-if="bundlesList.length > 0">
+        <draggable v-if="expanded" v-model="bundlesList" item-key="id" class="flex flex-col space-y-4">
           <template #item="{ element: item }">
             <div
               :key="item.id"
@@ -42,11 +37,11 @@
                   <tr class="border-b border-gray-500">
                     <td
                       class="p-2"
-                      :class="lowStockAlert(item.quantity) ? 'text-red-600 animate-pulse' : ''"
+                      :class="
+                        lowStockAlert(bundleQuantity(item)) ? 'text-red-600 animate-pulse' : ''
+                      "
                     >
-                      {{
-                        lowStockAlert(item.quantity) ? `${item.quantity} LOW STOCK` : item.quantity
-                      }}
+                      {{ bundleQuantity(item) }}
                     </td>
                     <td class="p-2 text-right">${{ formattedPrice(item.price) }}</td>
                   </tr>
@@ -65,7 +60,7 @@
       <!-- Show this message only if no hard items exist -->
       <template v-else>
         <p class="text-gray-500 text-center">
-          No hard items found in inventory. Click the "Add Inventory Item" button to add some merch!
+          No bundles found in inventory. Click the "Add Inventory Item" button to add some merch!
         </p>
       </template>
     </template>
@@ -74,26 +69,39 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { useRoute } from 'vue-router';
-import { useInventoryStore } from '@/stores/inventory';
 import draggable from 'vuedraggable';
+import { useInventoryStore } from '@/stores/inventory';
 import EditInventoryForm from './EditInventoryForm.vue';
+import { useRoute } from 'vue-router';
 
-const route = useRoute();
 const inventoryStore = useInventoryStore();
-const { fetchInventory } = inventoryStore;
+const { saveInventoryChanges, fetchInventory } = inventoryStore;
+const route = useRoute();
 
 const expanded = ref(true);
-const editingItem = ref(null);
-const modalOpen = ref(false);
 const isLoading = ref(true);
+const editingItem = ref(false);
+const modalOpen = ref(false);
+
+const bundlesList = computed(() =>
+  inventoryStore.inventory
+    .filter((item) => item.type === 'bundle')
+    .map((bundle) => ({
+      ...bundle,
+      items: inventoryStore.inventory.find((b) => b.id === bundle.id)?.items || [],
+    }))
+);
 
 fetchInventory(route.params.id).finally(() => {
   isLoading.value = false;
 });
-const hardItemsList = computed(() =>
-  inventoryStore.inventory.filter((item) => item.type === 'hard')
-);
+
+const bundleQuantity = computed(() => {
+  return (bundle) => {
+    if (!bundle.items || bundle.items.length === 0) return 'N/A';
+    return Math.min(...bundle.items.map((item) => item.quantity));
+  };
+});
 
 const lowStockAlert = (quantity) => {
   return quantity < 30;
@@ -104,7 +112,7 @@ const formattedPrice = (price) => {
 };
 
 const toggleEditForm = (item) => {
-  const selectedItem = hardItemsList.value.find((inventoryItem) => inventoryItem.id === item.id);
+  const selectedItem = bundlesList.value.find((inventoryItem) => inventoryItem.id === item.id);
   if (!selectedItem) {
     console.error('No item found for:', item);
     return;
@@ -114,7 +122,17 @@ const toggleEditForm = (item) => {
   modalOpen.value = true;
 };
 
-const handleItemDeleted = () => {
+const handleSaveChanges = async (updatedData) => {
+  editingItem.value = null;
+  modalOpen.value = false;
+
+  const success = await saveInventoryChanges(updatedData, route.params.id);
+  if (!success) {
+    alert('Failed to update item, please try again');
+  }
+};
+
+const closeEditForm = () => {
   editingItem.value = null;
   modalOpen.value = false;
 };
