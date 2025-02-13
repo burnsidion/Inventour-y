@@ -15,14 +15,12 @@
       </router-link>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Hard Items Section -->
-      <HardItems
-        :isLoading="isLoading"
-      />
-      <!-- Soft Items Section -->
-      <SoftItems 
-        :isLoading="isLoading"/>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <HardItems />
+
+      <SoftItems :isLoading="isLoading" />
+
+      <BundleItems />
     </div>
   </div>
 </template>
@@ -37,27 +35,20 @@ import { useTourStore } from '@/stores/tour';
 
 import HardItems from '@/components/HardItems.vue';
 import SoftItems from '@/components/SoftItems.vue';
+import BundleItems from '@/components/BundleItems.vue';
 
 const route = useRoute();
 const inventoryStore = useInventoryStore();
 const tourStore = useTourStore();
 
 const { inventory } = storeToRefs(inventoryStore);
-const { fetchInventory  } = inventoryStore;
+const { fetchInventory } = inventoryStore;
 
 const hardItemsList = ref([]);
 const softItemsList = ref([]);
 const isLoading = ref(true);
 
 const tourId = route.params.id;
-//   const numPrice = parseFloat(price);
-//   return !isNaN(numPrice) ? numPrice.toFixed(2) : 'N/A';
-// };
-
-// const getSoftItemPrice = (name) => {
-//   const item = inventory.value.find((i) => i.name === name && i.type === 'soft');
-//   return formattedPrice(item ? item.price : 'N/A');
-// };
 
 const hardItems = computed(() => {
   return inventory.value

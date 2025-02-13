@@ -139,10 +139,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   const saveProfilePic = async (file) => {
     if (!file) return;
-  
+
     const formData = new FormData();
     formData.append('profilePic', file);
-  
+
     try {
       const response = await axios.put('http://localhost:5002/api/users', formData, {
         headers: {
@@ -150,7 +150,7 @@ export const useAuthStore = defineStore('auth', () => {
           'Content-Type': 'multipart/form-data',
         },
       });
-  
+
       user.value.profile_pic = response.data.user.profile_pic;
     } catch (error) {
       console.error('Failed to upload profile picture:', error);
@@ -171,6 +171,6 @@ export const useAuthStore = defineStore('auth', () => {
     fetchUserData,
     updateUsername,
     updateBio,
-    saveProfilePic
+    saveProfilePic,
   };
 });
