@@ -42,6 +42,53 @@ export const useTourStore = defineStore('tour', () => {
     }
   };
 
+  const updateTour = async (tourId, tourData) => {
+    try {
+      const token = authStore.token;
+
+      const formattedTourData = {
+        ...tourData.value,
+        start_date: tourData.value.start_date || null,
+        end_date: tourData.value.end_date || null,
+      };
+
+      const response = await axios.put(
+        `http://localhost:5002/api/tours/${tourId}`,
+        formattedTourData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (response.status === 200) {
+        const index = tours.value.findIndex((tour) => tour.id === tourId);
+        if (index !== -1) {
+          tours.value[index] = response.data;
+        }
+      }
+    } catch (error) {
+      console.error('🚨 Update Tour Error:', error.message);
+    }
+  };
+
+  const deleteTour = async (tourId) => {
+    if (!confirm('Are you sure you want to delete this tour?')) return;
+
+    try {
+      const token = authStore.token;
+      await axios.delete(`http://localhost:5002/api/tours/${tourId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      tours.value = tours.value.filter((tour) => tour.id !== tourId);
+      router.push('/');
+    } catch (error) {
+      console.error('Error deleting tour:', error.response?.data || error.message);
+    }
+  };
+
   const fetchTourDetails = async (tourId) => {
     try {
       const token = authStore.token;
@@ -49,8 +96,14 @@ export const useTourStore = defineStore('tour', () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (response.data && response.data.name) {
+      if (response.data) {
         tourName.value = response.data.name;
+        showDetails.value = {
+          venue: response.data.venue || '',
+          date: response.data.date || '',
+          start_date: response.data.start_date || '',
+          end_date: response.data.end_date || '',
+        };
       }
     } catch (error) {
       console.error('Error fetching tour details', error);
@@ -150,23 +203,6 @@ export const useTourStore = defineStore('tour', () => {
     }
   };
 
-  const deleteTour = async (tourId) => {
-    if (!confirm('Are you sure you want to delete this tour?')) return;
-
-    try {
-      const token = authStore.token;
-      await axios.delete(`http://localhost:5002/api/tours/${tourId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      tours.value = tours.value.filter((tour) => tour.id !== tourId);
-    } catch (error) {
-      console.error('Error deleting tour:', error.response?.data || error.message);
-    }
-  };
-
   return {
     tourName,
     tours,
@@ -174,6 +210,7 @@ export const useTourStore = defineStore('tour', () => {
     fetchTours,
     fetchShows,
     deleteTour,
+    updateTour,
     deleteShow,
     createTour,
     addShow,

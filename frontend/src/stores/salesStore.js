@@ -5,7 +5,8 @@ import { useAuthStore } from '../stores/auth';
 
 export const useSalesStore = defineStore('sales', () => {
   const authStore = useAuthStore();
-  const sales = ref([]);
+  const recordedSales = ref([]);
+  const transactionSales = ref({});
   const totalSales = ref({});
   const cashSales = ref(0);
   const cardSales = ref(0);
@@ -23,7 +24,7 @@ export const useSalesStore = defineStore('sales', () => {
       });
 
       if (response.data.length > 0) {
-        sales.value = response.data;
+        recordedSales.value = response.data;
         calculateTotals();
       } else {
         console.log('No sales found for this show. Resetting sales data.');
@@ -35,8 +36,8 @@ export const useSalesStore = defineStore('sales', () => {
   };
 
   const resetSales = () => {
-    sales.value = [];
-    totalSales.value = {};
+    recordedSales.value = [];
+    totalSales.value = 0;
     cashSales.value = 0;
     cardSales.value = 0;
   };
@@ -70,14 +71,19 @@ export const useSalesStore = defineStore('sales', () => {
   };
 
   const calculateTotals = () => {
-    totalSales.value = sales.value
-      .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0)
-      .toFixed(2);
-    cashSales.value = sales.value
+    totalSales.value =
+      recordedSales.value.length > 0
+        ? recordedSales.value
+            .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0)
+            .toFixed(2)
+        : 0;
+
+    cashSales.value = recordedSales.value
       .filter((sale) => sale.payment_method === 'cash')
       .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0)
       .toFixed(2);
-    cardSales.value = sales.value
+
+    cardSales.value = recordedSales.value
       .filter((sale) => sale.payment_method === 'card')
       .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0)
       .toFixed(2);
@@ -92,12 +98,61 @@ export const useSalesStore = defineStore('sales', () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      sales.value.push(response.data.sale);
+      recordedSales.value.push(response.data.sale);
       calculateTotals();
     } catch (error) {
       console.error('Error recording sale:', error.response?.data || error.message);
     }
   };
 
-  return { sales, totalSales, cashSales, cardSales, fetchSales, addSale, fetchTourTotalSales };
+  const updateTransactionSale = (id, name, price, quantity) => {
+    if (quantity <= 0) {
+      delete transactionSales.value[id];
+    } else {
+      transactionSales.value[id] = { id, name, price, quantity };
+    }
+  };
+
+  const submitTransaction = async (showId, paymentMethod) => {
+    try {
+      const token = authStore.token;
+
+      for (const sale of Object.values(transactionSales.value)) {
+        await axios.post(
+          'http://localhost:5002/api/sales',
+          {
+            inventory_id: sale.id,
+            show_id: showId,
+            quantity_sold: sale.quantity,
+            total_amount: sale.quantity * sale.price,
+            payment_method: paymentMethod,
+          },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+      }
+
+      transactionSales.value = {};
+      await fetchSales(showId);
+    } catch (error) {
+      console.error('Error submitting sales:', error);
+    }
+  };
+
+  const resetTransactionSales = () => {
+    transactionSales.value = {};
+  };
+
+  return {
+    recordedSales,
+    transactionSales,
+    totalSales,
+    cashSales,
+    cardSales,
+    fetchSales,
+    addSale,
+    fetchTourTotalSales,
+    updateTransactionSale,
+    submitTransaction,
+    resetTransactionSales,
+  };
 });

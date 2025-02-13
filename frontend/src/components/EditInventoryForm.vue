@@ -4,7 +4,14 @@
     :class="{ 'disable-hover': modalOpen }"
   >
     <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-      <h2 class="text-xl font-bold text-center">Edit {{ inventoryItem.name }}</h2>
+      <h2 class="text-xl font-bold text-center">
+        <input
+          v-model="newItemName"
+          type="text"
+          class="w-full p-2 border rounded"
+          :placeholder="inventoryItem.name"
+        />
+      </h2>
 
       <form @submit.prevent="updateInventory">
         <div class="mb-4">
@@ -30,9 +37,12 @@
           </div>
         </div>
 
-        <div class="flex justify-between mt-4">
+        <div class="flex justify-between mt-4 gap-1">
           <button type="button" @click="$emit('close')" class="btn btn-secondary">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button @click="deleteItem(itemId)" class="btn btn-error text-white">
+            🗑 Delete Item
+          </button>
         </div>
       </form>
     </div>
@@ -41,13 +51,18 @@
   
 <script setup>
 import { ref, watch } from 'vue';
+import { useInventoryStore } from '@/stores/inventory';
+
+const inventoryStore = useInventoryStore();
+
+const { deleteInventoryItem } = inventoryStore;
 
 const props = defineProps({
   inventoryItem: {
     type: Object,
     required: true,
   },
-  modalOpen: {  
+  modalOpen: {
     type: Boolean,
     required: true,
   },
@@ -55,20 +70,35 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'save']);
 
-const updatedPrice = ref(props.inventoryItem.price);
-const addedQuantity = ref(0);
+const itemId = props.inventoryItem.id;
+
+const newItemName = ref('');
+const updatedItem = ref({});
+const updatedPrice = ref('');
 const updatedSizes = ref([]);
+const addedQuantity = ref([]);
 
 watch(
   () => props.inventoryItem,
   (newVal) => {
-    if (newVal.type === 'soft' && newVal.size) {
-      updatedSizes.value = [
-        {
-          size: newVal.size,
-          newStock: 0, 
-        },
-      ];
+    if (!newVal || !newVal.name) {
+      return;
+    }
+
+    updatedItem.value = { ...newVal };
+    updatedPrice.value = newVal.price || '';
+    newItemName.value = newVal.name;
+
+    if (newVal.type === 'soft' && Array.isArray(newVal.sizes)) {
+      updatedSizes.value = newVal.sizes.map((sizeObj) => ({
+        size: sizeObj.size,
+        newStock: sizeObj.quantity,
+      }));
+      addedQuantity.value = new Array(newVal.sizes.length).fill(0);
+    }
+
+    if (newVal.type === 'hard') {
+      addedQuantity.value = 0;
     }
   },
   { immediate: true }
@@ -77,13 +107,49 @@ watch(
 const updateInventory = () => {
   const updatedData = {
     id: props.inventoryItem.id,
-    price: updatedPrice.value, 
-    new_quantity:
-      props.inventoryItem.type === 'soft'
-        ? updatedSizes.value[0]?.newStock || 0 
-        : addedQuantity.value || 0,
+    name: newItemName.value,
+    price: updatedPrice.value,
   };
 
+  const duplicateItem = inventoryStore.inventory.find(
+    (item) =>
+      item.name.toLowerCase().trim() === updatedData.name.toLowerCase() &&
+      item.type === props.inventoryItem.type &&
+      item.id !== props.inventoryItem.id
+  );
+
+  if (duplicateItem) {
+    alert(
+      `An item with the name "${updatedData.name}" already exists in inventory. Please choose a different name.`
+    );
+    return;
+  }
+
+  if (props.inventoryItem.type === 'soft') {
+    updatedData.sizes = updatedSizes.value.map((sizeObj, index) => ({
+      size: sizeObj.size,
+      new_quantity: sizeObj.newStock + (addedQuantity.value[index] || 0),
+    }));
+  }
+
+  if (props.inventoryItem.type === 'hard') {
+    updatedData.quantity = (props.inventoryItem.quantity || 0) + addedQuantity.value;
+  }
+
   emit('save', updatedData);
+};
+
+const deleteItem = async (itemId) => {
+  if (!itemId) {
+    console.error('❌ Item ID is undefined. Cannot proceed with deletion.');
+    return;
+  }
+  const confirmed = confirm('Are you sure you want to delete this item?');
+  if (!confirmed) return;
+
+  const success = await deleteInventoryItem(itemId);
+  if (!success) {
+    alert('Failed to delete item, please try again');
+  }
 };
 </script>

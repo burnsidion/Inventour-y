@@ -76,18 +76,16 @@ const sizesSelected = reactive({});
 const sizes = reactive({});
 
 const submitInventory = async () => {
-  const updatedSizes = await inventoryStore.updateSizes(sizes, sizesSelected)
-
   const payload = {
     tour_id: route.query.tour_id,
     name: name.value.trim(),
     type: type.value,
-    sizes: type.value === 'soft' ? updatedSizes : null,
+    sizes: type.value === 'soft' ? sizes : null,
     quantity: type.value === 'hard' ? quantity.value : null,
     price: price.value,
   };
 
-  const success = await inventoryStore.addInventoryItem(route.query.tour_id, payload);
+  const success = await inventoryStore.addInventoryItem(payload, payload.tour_id);
 
   if (success) {
     router.push(`/tours/${route.query.tour_id}/inventory`);
