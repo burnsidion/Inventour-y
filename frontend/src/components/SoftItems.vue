@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- Inventory Form Component -->
     <EditInventoryForm
       v-if="modalOpen && editingItem"
       :inventory-item="editingItem"
@@ -7,6 +8,8 @@
       @close="closeEditForm"
       @save="handleSaveChanges"
     />
+
+    <!-- Expand/Collapse Buttons -->
     <div class="flex flex-col gap-1">
       <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">Soft Items</h2>
       <button @click="expanded = !expanded" class="text-sm text-blue-500 mb-2">
@@ -14,7 +17,15 @@
       </button>
     </div>
 
-    <template v-if="!isLoading">
+    <!-- Skeleton Card Component -->
+    <template v-if="isLoading">
+      <div class="flex flex-col space-y-4">
+        <SkeletonCard v-for="n in (softItemsList.length || 3, 6)" :key="n" :height="300" />
+      </div>
+    </template>
+
+    <template v-else>
+      <!-- Check for Soft Items -->
       <template v-if="softItemsList.length > 0">
         <draggable
           v-if="expanded"
@@ -26,6 +37,7 @@
             <div
               class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce cursor-move text-[#393f4d]"
             >
+              <!-- Soft Item Table -->
               <h3 class="font-semibold">{{ item.name }}</h3>
               <p class="text-gray-600 mb-2">Price: ${{ getSoftItemPrice(item.name) }}</p>
               <table class="w-full border-collapse">
@@ -55,6 +67,8 @@
                   </tr>
                 </tbody>
               </table>
+
+              <!-- Buttons -->
               <div class="flex justify-center mt-2 gap-2">
                 <button
                   @click="toggleEditForm(item)"
@@ -70,6 +84,8 @@
           </template>
         </draggable>
       </template>
+      
+      <!-- Zero State -->
       <template v-else>
         <p class="text-gray-500 text-center">
           No soft items found in inventory. Click the "Add Inventory Item" button to add some merch!
@@ -83,8 +99,9 @@
 import { onMounted, ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useInventoryStore } from '@/stores/inventory';
-import EditInventoryForm from './EditInventoryForm.vue';
 import draggable from 'vuedraggable';
+import EditInventoryForm from './EditInventoryForm.vue';
+import SkeletonCard from './SkeletonCard.vue';
 
 const inventoryStore = useInventoryStore();
 const { fetchInventory, saveInventoryChanges } = inventoryStore;
@@ -95,7 +112,7 @@ const tourId = route.params.id;
 const expanded = ref(true);
 const editingItem = ref(null);
 const modalOpen = ref(false);
-const isLoading = ref(false);
+const isLoading = ref(true);
 
 const sizeOrder = ['S', 'M', 'L', 'XL', 'XXL', 'One Size'];
 
@@ -176,8 +193,10 @@ const deleteItem = async (itemId) => {
 };
 
 onMounted(async () => {
-  isLoading.value = true;
   await fetchInventory(route.params.id);
-  isLoading.value = false;
+
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 1000);
 });
 </script>
