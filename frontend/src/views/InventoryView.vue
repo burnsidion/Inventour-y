@@ -50,6 +50,8 @@ const isLoading = ref(true);
 
 const tourId = route.params.id;
 
+const sizeOrder = ['S', 'M', 'L', 'XL', 'XXL', 'XXL', 'One Size'];
+
 const hardItems = computed(() => {
   return inventory.value
     .filter((item) => item.type === 'hard')
@@ -73,10 +75,12 @@ const softItemsGrouped = computed(() => {
       }
 
       if (item.sizes && item.sizes.length > 0) {
-        grouped[item.name].sizes = item.sizes.map((s) => ({
-          size: s.size,
-          quantity: s.quantity,
-        }));
+        grouped[item.name].sizes = item.sizes
+          .map((s) => ({
+            size: s.size,
+            quantity: s.quantity,
+          }))
+          .sort((a, b) => sizeOrder.indexOf(a.size) - sizeOrder.indexOf(b.size));
       } else {
         grouped[item.name].sizes.push({
           size: 'One Size',
@@ -88,7 +92,6 @@ const softItemsGrouped = computed(() => {
 
   return grouped;
 });
-
 watchEffect(() => {
   hardItemsList.value = [...hardItems.value];
 

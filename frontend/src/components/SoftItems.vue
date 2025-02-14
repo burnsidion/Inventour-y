@@ -55,12 +55,15 @@
                   </tr>
                 </tbody>
               </table>
-              <div class="flex justify-center mt-2">
+              <div class="flex justify-center mt-2 gap-2">
                 <button
                   @click="toggleEditForm(item)"
                   class="btn btn-error text-white hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
                 >
                   📝 Edit Item
+                </button>
+                <button @click="deleteItem(item.id)" class="btn btn-error text-white">
+                  🗑 Delete
                 </button>
               </div>
             </div>
@@ -94,8 +97,17 @@ const editingItem = ref(null);
 const modalOpen = ref(false);
 const isLoading = ref(false);
 
+const sizeOrder = ['S', 'M', 'L', 'XL', 'XXL', 'One Size'];
+
 const softItemsList = computed(() => {
-  return inventoryStore.inventory.filter((item) => item.type === 'soft');
+  return inventoryStore.inventory
+    .filter((item) => item.type === 'soft')
+    .map((item) => ({
+      ...item,
+      sizes: item.sizes
+        ? item.sizes.sort((a, b) => sizeOrder.indexOf(a.size) - sizeOrder.indexOf(b.size))
+        : [],
+    }));
 });
 
 const formattedPrice = (price) => {
@@ -133,10 +145,12 @@ const closeEditForm = () => {
 
 const handleSaveChanges = async (updatedData) => {
   if (updatedData.sizes) {
-    updatedData.sizes = updatedData.sizes.map((sizeObj) => ({
-      size: sizeObj.size,
-      quantity: sizeObj.quantity !== undefined ? sizeObj.quantity : sizeObj.new_quantity || 0,
-    }));
+    updatedData.sizes = updatedData.sizes
+      .map((sizeObj) => ({
+        size: sizeObj.size,
+        quantity: sizeObj.quantity !== undefined ? sizeObj.quantity : sizeObj.new_quantity || 0,
+      }))
+      .sort((a, b) => sizeOrder.indexOf(a.size) - sizeOrder.indexOf(b.size));
   }
 
   editingItem.value = null;
@@ -145,6 +159,19 @@ const handleSaveChanges = async (updatedData) => {
   const success = await saveInventoryChanges(updatedData, tourId);
   if (!success) {
     alert('Failed to update item, please try again');
+  }
+};
+
+const deleteItem = async (itemId) => {
+  const confirmed = confirm('🚨 Are you sure you want to delete this item?');
+  if (!confirmed) return;
+
+  const success = await inventoryStore.deleteInventoryItem(itemId);
+  if (success) {
+    console.log(`✅ Item ${itemId} deleted successfully.`);
+    await inventoryStore.fetchInventory(route.params.id);
+  } else {
+    alert('Failed to delete item, please try again.');
   }
 };
 
