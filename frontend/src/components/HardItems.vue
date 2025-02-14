@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- Edit Inventory Component -->
     <EditInventoryForm
       v-if="modalOpen"
       :inventoryItem="editingItem"
@@ -9,6 +10,7 @@
       @save="handleSaveChanges"
     />
 
+    <!-- Expand/Collapse Buttons  -->
     <div class="flex flex-col gap-1">
       <h2 class="text-xl font-semibold flex items-center gap-2 mb-2 justify-center">Hard Items</h2>
       <button @click="expanded = !expanded" class="text-sm text-blue-500 mb-2">
@@ -16,8 +18,15 @@
       </button>
     </div>
 
+    <!-- Skeleton Card Component  -->
+    <template v-if="isLoading">
+      <div class="flex flex-col space-y-4">
+        <SkeletonCard v-for="n in (hardItemsList.length || 3, 6)" :key="n" :height="150"/>
+      </div>
+    </template>
+
     <!-- Only render content if not loading -->
-    <template v-if="!isLoading">
+    <template v-else>
       <!-- Check if there are hard items -->
       <template v-if="hardItemsList.length > 0">
         <draggable
@@ -31,6 +40,7 @@
               :key="item.id"
               class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce cursor-move text-[#393f4d]"
             >
+              <!-- Hard Items Table  -->
               <h3 class="font-semibold">{{ item.name }}</h3>
               <table class="w-full border-collapse">
                 <thead>
@@ -53,6 +63,8 @@
                   </tr>
                 </tbody>
               </table>
+
+              <!-- Buttons  -->
               <div class="flex justify-center mt-2 gap-2">
                 <button @click="toggleEditForm(item)" class="btn btn-error text-white">
                   📝 Edit Item
@@ -77,11 +89,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useInventoryStore } from '@/stores/inventory';
 import draggable from 'vuedraggable';
 import EditInventoryForm from './EditInventoryForm.vue';
+import SkeletonCard from './SkeletonCard.vue';
 
 const route = useRoute();
 const inventoryStore = useInventoryStore();
@@ -91,10 +104,6 @@ const expanded = ref(true);
 const editingItem = ref(null);
 const modalOpen = ref(false);
 const isLoading = ref(true);
-
-fetchInventory(route.params.id).finally(() => {
-  isLoading.value = false;
-});
 
 const hardItemsList = computed(() =>
   inventoryStore.inventory.filter((item) => item.type === 'hard')
@@ -151,4 +160,11 @@ const deleteItem = async (itemId) => {
     alert('Failed to delete item, please try again.');
   }
 };
+onMounted(async () => {
+  await fetchInventory(route.params.id);
+
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 1000);
+});
 </script>

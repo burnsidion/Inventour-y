@@ -69,7 +69,7 @@
                     @click="tourStore.deleteShow(tour.id, show.id)"
                     class="text-red-500 hover:text-red-700 ml-6 px-2"
                   >
-                    🗑 Delete
+                    🗑
                   </button>
                 </div>
               </div>
