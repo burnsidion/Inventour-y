@@ -6,9 +6,16 @@
     <div class="flex-1 p-4 md:p-6">
       <h1 class="text-3xl font-bold mb-6 text-center">Your Tours</h1>
 
+      <!-- Skeleton Loader Component  -->
+      <template v-if="isLoading">
+        <div class="flex flex-col space-y-2">
+          <TourCardSkeleton v-for="n in tours.length" :key="n" />
+        </div>
+      </template>
+
       <!-- Tours List -->
       <draggable
-        v-if="tours?.length > 0"
+        v-else-if="tours?.length > 0 && !isLoading"
         v-model="tours"
         item-key="id"
         @end="saveTourOrder"
@@ -109,18 +116,20 @@
 import { onMounted, ref, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { format } from 'date-fns';
-import draggable from 'vuedraggable';
 import { useRouter } from 'vue-router';
 import { useTourStore } from '@/stores/tour';
 import { useSalesStore } from '@/stores/salesStore';
+import draggable from 'vuedraggable';
 
 import SidebarMenu from '@/components/SidebarMenu.vue';
+import TourCardSkeleton from './TourCardSkeleton.vue';
 
 const router = useRouter();
 const tourStore = useTourStore();
 const salesStore = useSalesStore();
 
 const showsExpanded = ref({});
+const isLoading = ref(true);
 
 const getMaxHeight = computed(() => {
   return (tourId) => {
@@ -160,5 +169,9 @@ onMounted(async () => {
   for (const tour of tours.value) {
     await salesStore.fetchTourTotalSales(tour.id);
   }
+
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 1000);
 });
 </script>
