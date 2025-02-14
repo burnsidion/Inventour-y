@@ -40,7 +40,7 @@
       <div v-if="type === 'bundle'">
         <label class="block mt-4 mb-2 text-[#393f4d]">Select Items for Bundle</label>
         <div class="grid grid-cols-2 gap-4">
-          <div v-for="item in inventoryStore.inventory" :key="item.id" class="flex items-center">
+          <div v-for="item in filteredInventory" :key="item.id" class="flex items-center">
             <input
               type="checkbox"
               :id="`item-${item.id}`"
@@ -75,7 +75,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useInventoryStore } from '@/stores/inventory';
 
@@ -92,6 +92,10 @@ const selectedBundleItems = ref([]);
 const availableSizes = ref(['S', 'M', 'L', 'XL', 'XXL']);
 const sizesSelected = reactive({});
 const sizes = reactive({});
+
+const filteredInventory = computed(() => {
+  return inventoryStore.inventory.filter((item) => item.type !== 'bundle');
+});
 
 const submitInventory = async () => {
   const payload = {

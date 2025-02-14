@@ -459,6 +459,7 @@ router.get("/inventory", authenticateToken, async (req, res) => {
       return res.status(400).json({ error: "Missing required tour_id" });
     }
 
+    // Fetch all inventory items
     const inventoryResult = await pool.query(
       `SELECT 
               id, 
@@ -479,20 +480,33 @@ router.get("/inventory", authenticateToken, async (req, res) => {
     const formattedInventory = await Promise.all(
       inventoryItems.map(async (item) => {
         if (item.type === "soft") {
+          // Fetch sizes for soft items
           const sizesResult = await pool.query(
             `SELECT size, quantity FROM inventory_sizes WHERE inventory_id = $1`,
             [item.id]
           );
 
-          return {
-            ...item,
-            sizes: sizesResult.rows,
-          };
+          return { ...item, sizes: sizesResult.rows };
+        } else if (item.type === "bundle") {
+          // Fetch items in the bundle
+          const bundleItemsResult = await pool.query(
+            `SELECT i.id, i.name, i.type, i.price, i.image_url, bi.quantity,
+                    CASE 
+                        WHEN i.type = 'soft' THEN 
+                            (SELECT json_agg(json_build_object('size', s.size, 'quantity', s.quantity)) 
+                            FROM inventory_sizes s 
+                            WHERE s.inventory_id = i.id)
+                        ELSE NULL
+                    END AS sizes
+             FROM bundle_items bi
+             JOIN inventory i ON bi.item_id = i.id
+             WHERE bi.bundle_id = $1`,
+            [item.id]
+          );
+
+          return { ...item, items: bundleItemsResult.rows };
         } else {
-          return {
-            ...item,
-            quantity: item.quantity,
-          };
+          return item;
         }
       })
     );

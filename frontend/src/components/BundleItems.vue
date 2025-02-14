@@ -19,7 +19,12 @@
     <template v-if="!isLoading">
       <!-- Check if there are hard items -->
       <template v-if="bundlesList.length > 0">
-        <draggable v-if="expanded" v-model="bundlesList" item-key="id" class="flex flex-col space-y-4">
+        <draggable
+          v-if="expanded"
+          v-model="bundlesList"
+          item-key="id"
+          class="flex flex-col space-y-4"
+        >
           <template #item="{ element: item }">
             <div
               :key="item.id"
@@ -50,6 +55,9 @@
               <div class="flex justify-center mt-2 gap-2">
                 <button @click="toggleEditForm(item)" class="btn btn-error text-white">
                   📝 Edit Item
+                </button>
+                <button @click="deleteItem(item.id)" class="btn btn-error text-white">
+                  🗑 Delete
                 </button>
               </div>
             </div>
@@ -96,12 +104,23 @@ fetchInventory(route.params.id).finally(() => {
   isLoading.value = false;
 });
 
-const bundleQuantity = computed(() => {
-  return (bundle) => {
-    if (!bundle.items || bundle.items.length === 0) return 'N/A';
-    return Math.min(...bundle.items.map((item) => item.quantity));
-  };
-});
+const bundleQuantity = (bundle) => {
+  if (!bundle || !bundle.items || bundle.items.length === 0) {
+    console.log('🚨 No items found in bundle, returning N/A');
+    return 'N/A';
+  }
+  const availableQuantities = bundle.items.map((item) => {
+    if (item.type === 'hard') {
+      return item.quantity;
+    } else if (item.type === 'soft' && Array.isArray(item.sizes)) {
+      const sizeQuantities = item.sizes.map((size) => size.quantity);
+      return sizeQuantities.length ? Math.min(...sizeQuantities) : Infinity;
+    }
+    return Infinity;
+  });
+
+  return availableQuantities.length ? Math.min(...availableQuantities) : 'N/A';
+};
 
 const lowStockAlert = (quantity) => {
   return quantity < 30;
@@ -135,5 +154,18 @@ const handleSaveChanges = async (updatedData) => {
 const closeEditForm = () => {
   editingItem.value = null;
   modalOpen.value = false;
+};
+
+const deleteItem = async (itemId) => {
+  const confirmed = confirm('🚨 Are you sure you want to delete this item?');
+  if (!confirmed) return;
+
+  const success = await inventoryStore.deleteInventoryItem(itemId);
+  if (success) {
+    console.log(`✅ Item ${itemId} deleted successfully.`);
+    await inventoryStore.fetchInventory(route.params.id);
+  } else {
+    alert('Failed to delete item, please try again.');
+  }
 };
 </script>
