@@ -57,6 +57,9 @@
                 <button @click="toggleEditForm(item)" class="btn btn-error text-white">
                   📝 Edit Item
                 </button>
+                <button @click="deleteItem(item.id)" class="btn btn-error text-white">
+                  🗑 Delete
+                </button>
               </div>
             </div>
           </template>
@@ -134,5 +137,18 @@ const toggleEditForm = (item) => {
 const handleItemDeleted = () => {
   editingItem.value = null;
   modalOpen.value = false;
+};
+
+const deleteItem = async (itemId) => {
+  const confirmed = confirm('🚨 Are you sure you want to delete this item?');
+  if (!confirmed) return;
+
+  const success = await inventoryStore.deleteInventoryItem(itemId);
+  if (success) {
+    console.log(`✅ Item ${itemId} deleted successfully.`);
+    await inventoryStore.fetchInventory(route.params.id);
+  } else {
+    alert('Failed to delete item, please try again.');
+  }
 };
 </script>

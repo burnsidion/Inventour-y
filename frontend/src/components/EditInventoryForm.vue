@@ -40,9 +40,6 @@
         <div class="flex justify-between mt-4 gap-1">
           <button type="button" @click="$emit('close')" class="btn btn-secondary">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Changes</button>
-          <button @click="deleteItem(itemId)" class="btn btn-error text-white">
-            🗑 Delete Item
-          </button>
         </div>
       </form>
     </div>
@@ -51,11 +48,6 @@
   
 <script setup>
 import { ref, watch } from 'vue';
-import { useInventoryStore } from '@/stores/inventory';
-
-const inventoryStore = useInventoryStore();
-
-const { deleteInventoryItem } = inventoryStore;
 
 const props = defineProps({
   inventoryItem: {
@@ -69,8 +61,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'save', 'itemDeleted']);
-
-const itemId = props.inventoryItem.id;
 
 const newItemName = ref('');
 const updatedItem = ref({});
@@ -124,25 +114,5 @@ const updateInventory = () => {
   };
 
   emit('save', updatedData);
-};
-
-const deleteItem = async (itemId) => {
-  const tourId = props.inventoryItem.tour_id;
-  if (!tourId) {
-    console.error('❌ Cannot delete item: tourId is missing.');
-    return;
-  }
-
-  const confirmed = confirm('Are you sure you want to delete this item?');
-  if (!confirmed) return;
-
-  const success = await deleteInventoryItem(itemId, tourId);
-  if (success) {
-    emit('itemDeleted');
-
-    emit('close');
-  } else {
-    alert('Failed to delete item, please try again');
-  }
 };
 </script>
