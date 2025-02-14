@@ -21,7 +21,6 @@ export const useInventoryStore = defineStore('inventory', () => {
       });
 
       let inventoryData = response.data;
-
       inventory.value = inventoryData.filter((item) => !!item);
     } catch (error) {
       console.error('❌ Error fetching inventory:', error.response?.data || error);
