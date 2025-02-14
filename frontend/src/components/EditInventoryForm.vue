@@ -68,6 +68,8 @@ const updatedPrice = ref('');
 const updatedSizes = ref([]);
 const addedQuantity = ref(0);
 
+const sizeOrder = ['S', 'M', 'L', 'XL', 'XXL', 'One Size'];
+
 watch(
   () => props.inventoryItem,
   (newVal) => {
@@ -81,11 +83,12 @@ watch(
     newItemName.value = newVal.name;
 
     if (newVal.type === 'soft' && Array.isArray(newVal.sizes)) {
-      updatedSizes.value = newVal.sizes.map((sizeObj) => ({
-        size: sizeObj.size,
-        newStock: sizeObj.quantity,
-      }));
-      addedQuantity.value = new Array(newVal.sizes.length).fill(0);
+      updatedSizes.value = newVal.sizes
+        .map((size) => ({
+          size: size.size,
+          newStock: 0,
+        }))
+        .sort((a, b) => sizeOrder.indexOf(a.size) - sizeOrder.indexOf(b.size));
     }
 
     if (newVal.type === 'hard') {
@@ -110,7 +113,12 @@ const updateInventory = () => {
     id: props.inventoryItem.id,
     name: newItemName.value.trim(),
     price: updatedPrice.value,
-    quantity: props.inventoryItem.quantity + addedQuantity.value,
+    sizes: updatedSizes.value.map((size) => ({
+      size: size.size,
+      quantity:
+        Number(size.newStock) +
+        Number(props.inventoryItem.sizes.find((s) => s.size === size.size)?.quantity || 0), // ✅ Fix: Ensure the quantity updates properly
+    })),
   };
 
   emit('save', updatedData);
