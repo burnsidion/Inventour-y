@@ -668,8 +668,14 @@ router.delete("/inventory/:id", authenticateToken, async (req, res) => {
 
 //Sales routes
 router.post("/sales", authenticateToken, async (req, res) => {
-  const { inventory_id, show_id, quantity_sold, total_amount, payment_method } =
-    req.body;
+  const {
+    inventory_id,
+    show_id,
+    quantity_sold,
+    total_amount,
+    payment_method,
+    size,
+  } = req.body;
 
   if (
     !inventory_id ||
@@ -685,7 +691,6 @@ router.post("/sales", authenticateToken, async (req, res) => {
   }
 
   const validPaymentMethods = ["cash", "card", "free"];
-
   if (!validPaymentMethods.includes(payment_method)) {
     return res.status(400).json({
       error: `Invalid payment method. Must be one of: ${validPaymentMethods.join(
@@ -702,13 +707,45 @@ router.post("/sales", authenticateToken, async (req, res) => {
       adjustedPrice = 0;
     }
 
-    const inventoryResult = await pool.query(
-      `UPDATE inventory
-       SET quantity = quantity - $1
-       WHERE id = $2 AND quantity >= $1
-       RETURNING *`,
-      [quantity_sold, inventory_id]
+    // Check the item's type (hard or soft)
+    const itemTypeResult = await pool.query(
+      `SELECT type FROM inventory WHERE id = $1`,
+      [inventory_id]
     );
+
+    if (itemTypeResult.rows.length === 0) {
+      await pool.query("ROLLBACK");
+      return res.status(400).json({ error: "Invalid inventory ID" });
+    }
+
+    const itemType = itemTypeResult.rows[0].type;
+
+    // Ensure size is required only for soft items
+    if (itemType === "soft" && !size) {
+      await pool.query("ROLLBACK");
+      return res.status(400).json({ error: "Size is required for soft items" });
+    }
+
+    let inventoryResult;
+    if (itemType === "soft") {
+      // Subtract from inventory_sizes table for soft items
+      inventoryResult = await pool.query(
+        `UPDATE inventory_sizes
+         SET quantity = quantity - $1
+         WHERE inventory_id = $2 AND size = $3 AND quantity >= $1
+         RETURNING *`,
+        [quantity_sold, inventory_id, size]
+      );
+    } else {
+      // Subtract from inventory table for hard items
+      inventoryResult = await pool.query(
+        `UPDATE inventory
+         SET quantity = quantity - $1
+         WHERE id = $2 AND quantity >= $1
+         RETURNING *`,
+        [quantity_sold, inventory_id]
+      );
+    }
 
     if (inventoryResult.rows.length === 0) {
       await pool.query("ROLLBACK");
@@ -717,11 +754,19 @@ router.post("/sales", authenticateToken, async (req, res) => {
         .json({ error: "Insufficient inventory or invalid inventory ID" });
     }
 
+    // Record the sale
     const salesResult = await pool.query(
-      `INSERT INTO sales (inventory_id, show_id, quantity_sold, total_amount, payment_method)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO sales (inventory_id, show_id, quantity_sold, total_amount, payment_method, size)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [inventory_id, show_id, quantity_sold, adjustedPrice, payment_method]
+      [
+        inventory_id,
+        show_id,
+        quantity_sold,
+        adjustedPrice,
+        payment_method,
+        itemType === "soft" ? size : null,
+      ]
     );
 
     await pool.query("COMMIT");
