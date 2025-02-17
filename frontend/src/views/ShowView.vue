@@ -41,9 +41,10 @@
     </div>
 
     <!-- Inventory Table -->
-    <div class="grid md:grid-cols-2 sm:grid-cols-1 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 md:auto-cols-fr gap-2 md:gap-6 lg:gap-8">
       <HardItemsSale :hardItems="hardItems" />
       <SoftItemsSale :softItems="softItems" />
+      <BundleItemsSale :bundles="bundles" />
     </div>
 
     <!-- Success Message -->
@@ -96,6 +97,7 @@ import { format } from 'date-fns';
 
 import HardItemsSale from '@/components/HardItemsSale.vue';
 import SoftItemsSale from '@/components/SoftItemsSale.vue';
+import BundleItemsSale from '@/components/BundleItemsSale.vue';
 
 const salesStore = useSalesStore();
 const tourStore = useTourStore();
@@ -113,6 +115,10 @@ const showVenue = ref('');
 const showDate = ref('');
 const successMessage = ref('');
 
+const hardItems = computed(() => inventory.value.filter((item) => item.type === 'hard'));
+const softItems = computed(() => inventory.value.filter((item) => item.type === 'soft'));
+const bundles = computed(() => inventory.value.filter((item) => item.type === 'bundle'));
+
 onMounted(async () => {
   if (!tourId) {
     console.error('🚨 No tourId found in query params');
@@ -125,14 +131,11 @@ onMounted(async () => {
   }
 });
 
-const hardItems = computed(() => inventory.value.filter((item) => item.type === 'hard'));
-const softItems = computed(() => inventory.value.filter((item) => item.type === 'soft'));
-
 const hardItemsArray = computed(() => {
   return Object.values(salesStore.transactionSales)
-    .filter((sale) => sale.quantity > 0) // No need for entries if ID isn't needed
+    .filter((sale) => sale.quantity > 0)
     .map((sale) => ({
-      id: sale.id, // Assuming `id` is stored in the object
+      id: sale.id,
       name: sale.name || getItemName(sale.id),
       price: sale.price ? parseFloat(sale.price).toFixed(2) : getItemPrice(sale.id),
       qty: sale.quantity,

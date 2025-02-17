@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex flex-col mb-2">
-      <h2 class="text-xl font-semibold mb-4 text-center">👕 Soft Items</h2>
+      <h2 class="text-xl font-semibold mb-4 text-center">Soft Items</h2>
       <button @click="expanded = !expanded" class="text-sm text-blue-500 mb-2">
         {{ expanded ? 'Collapse' : 'Expand' }}
       </button>
@@ -15,7 +15,7 @@
           <!-- Collapse Button Column -->
           <span>Item</span>
           <span>Sizes</span>
-          <span>Amount</span>
+          <span>Sold</span>
         </div>
 
         <!-- Item Rows -->
@@ -28,7 +28,7 @@
           <div class="flex justify-center py-4">
             <button
               @click="toggleCollapse(itemName)"
-              class="w-8 h-8 flex items-center py-8 px-8 justify-center rounded bg-gray-700 text-white text-lg"
+              class="w-4 h-4 flex items-center py-4 px-4 justify-center rounded bg-gray-700 text-white text-lg"
             >
               {{ collapsedRows[itemName] ? '+' : '-' }}
             </button>
@@ -40,11 +40,14 @@
           </div>
 
           <!-- Sizes Column -->
-          <div v-if="!collapsedRows[itemName]" class="flex flex-col gap-2 items-center w-full">
+          <div
+            v-if="!collapsedRows[itemName]"
+            class="w-sales-input flex flex-col gap-2 items-center"
+          >
             <span
               v-for="size in sizes"
               :key="size.id"
-              class="bg-gray-700 px-1 py-1 rounded text-center content-center w-[80px] text-sm sm:text-xs lg:text-base min-h-[40px] whitespace-nowrap"
+              class="bg-gray-700 px-1 py-1 rounded text-center content-center text-sm sm:text-xs w-16 md:w-16 lg:w-20 min-h-[40px] whitespace-nowrap"
               :class="lowStockAlert(size.quantity) ? 'text-red-600 animate-pulse' : ''"
             >
               {{ size.size }} ({{ size.quantity }})
@@ -52,7 +55,10 @@
           </div>
 
           <!-- Sold Quantity Inputs -->
-          <div v-if="!collapsedRows[itemName]" class="flex flex-col gap-2 items-center w-full">
+          <div
+            v-if="!collapsedRows[itemName]"
+            class="flex flex-col gap-2 items-center w-sales-input"
+          >
             <input
               v-for="size in sizes"
               :key="`${itemName}-${size.size}`"
@@ -61,7 +67,7 @@
                 updateTransaction(size.id, size.size, itemName, size.price, $event.target.value)
               "
               type="number"
-              class="border rounded py-1 px-3 w-[80px] text-center text-sm min-h-[40px]"
+              class="w-sales-input md:w-9 lg:w-20 border rounded py-1 text-center text-sm min-h-[40px]"
               min="0"
               placeholder="Qty"
             />
