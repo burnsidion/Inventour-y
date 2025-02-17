@@ -10,6 +10,10 @@ export default {
         fallback: '#3f3f3f',
         ivory: '#FFF1E7',
       },
+      spacing: {
+        'sales-input': '60px',
+        'sizes-display': '80px',
+      },
       keyframes: {
         bounceOnce: {
           '0%, 100%': { transform: 'translateY(0)' },

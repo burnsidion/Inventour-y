@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex flex-col mb-2">
-      <h2 class="text-xl font-semibold mb-4 text-center">Hard Items</h2>
+      <h2 class="text-xl font-semibold mb-4 text-center">Bundles</h2>
       <button @click="expanded = !expanded" class="text-sm text-blue-500 mb-2">
         {{ expanded ? 'Collapse' : 'Expand' }}
       </button>
@@ -15,7 +15,7 @@
           <span>Sold</span>
         </div>
         <div
-          v-for="item in hardItems"
+          v-for="item in bundles"
           :key="item.id"
           class="grid grid-cols-4 gap-4 border-b py-2 items-center text-center"
         >
@@ -45,8 +45,11 @@ import { ref, computed } from 'vue';
 import { useSalesStore } from '@/stores/salesStore';
 
 const salesStore = useSalesStore();
+
 defineProps({
-  hardItems: Array,
+  bundles: {
+    type: Array,
+  },
 });
 
 const expanded = ref(true);
@@ -81,3 +84,4 @@ const lowStockAlert = (quantity) => {
   return quantity < 30;
 };
 </script>
+  
