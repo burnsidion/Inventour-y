@@ -9,6 +9,25 @@ export const useAuthStore = defineStore('auth', () => {
   let inactivityTimer = null;
   const router = useRouter();
 
+  const logout = () => {
+    user.value = null;
+    token.value = null;
+    localStorage.removeItem('token');
+    clearInactivityTimer();
+    router.push('/login');
+  };
+
+  axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response && error.response.status === 401) {
+        console.warn('🚨 Token expired or invalid. Logging out user.');
+        logout();
+      }
+      return Promise.reject(error);
+    },
+  );
+
   const setUser = (userData, userToken) => {
     user.value = userData;
     token.value = userToken;
@@ -29,22 +48,33 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = response.data;
     } catch (error) {
       console.error('Error fetching user data:', error.response?.data || error.message);
+
+      if (error.response?.status === 401) {
+        console.warn('Session expired. Logging out...');
+        logout();
+      }
     }
   };
 
-  const logout = () => {
-    user.value = null;
-    token.value = null;
-    localStorage.removeItem('token');
-    clearInactivityTimer();
-    router.push('/login');
-  };
-
-  const loadUserFromStorage = () => {
+  const loadUserFromStorage = async () => {
     const storedToken = localStorage.getItem('token');
-    if (storedToken) {
+    if (!storedToken) return;
+
+    try {
+      const decodedToken = JSON.parse(atob(storedToken.split('.')[1]));
+      const exp = decodedToken.exp * 1000; // Convert expiration time to milliseconds
+
+      if (Date.now() >= exp) {
+        console.warn('Stored token is expired. Logging out...');
+        logout();
+        return;
+      }
+
       token.value = storedToken;
       startInactivityTimer();
+    } catch (error) {
+      console.error('Error validating stored token:', error);
+      logout();
     }
   };
 
