@@ -132,16 +132,6 @@ onMounted(async () => {
 });
 
 const hardItemsArray = computed(() => {
-  console.log(
-    Object.values(salesStore.transactionSales)
-      .filter((sale) => sale.quantity > 0)
-      .map((sale) => ({
-        id: sale.id,
-        name: sale.name || getItemName(sale.id),
-        price: sale.price ? parseFloat(sale.price).toFixed(2) : getItemPrice(sale.id),
-        qty: sale.quantity,
-      }))
-  );
   return Object.values(salesStore.transactionSales)
     .filter((sale) => sale.quantity > 0)
     .map((sale) => ({
@@ -176,7 +166,7 @@ const softItemsArray = computed(() => {
           softSales.push({
             id: Number(id),
             name: sale.name,
-            size: size, // Ensure size is included
+            size: size,
             price: parseFloat(sale.price || getItemPrice(id)).toFixed(2),
             qty: sizeData.quantity,
             remainingStock: sizeRecord.quantity - sizeData.quantity,
@@ -233,7 +223,6 @@ const fetchShowDetails = async () => {
 };
 
 const submitSale = async () => {
-  console.log('Submitting sales:', JSON.stringify(filteredSales.value, null, 2));
   for (const sale of filteredSales.value) {
     await salesStore.addSale(
       sale.id,
@@ -241,7 +230,7 @@ const submitSale = async () => {
       sale.qty,
       sale.qty * sale.price,
       paymentMethod.value,
-      sale.size || undefined // Ensures `size` is undefined for hard items
+      sale.size || undefined
     );
   }
 
