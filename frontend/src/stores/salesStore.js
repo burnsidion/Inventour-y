@@ -89,14 +89,41 @@ export const useSalesStore = defineStore('sales', () => {
       .toFixed(2);
   };
 
-  const addSale = async (inventory_id, show_id, quantity_sold, total_amount, payment_method) => {
+  const addSale = async (
+    inventory_id,
+    show_id,
+    quantity_sold,
+    total_amount,
+    payment_method,
+    size,
+  ) => {
     try {
       const token = authStore.token;
-      const response = await axios.post(
-        'http://localhost:5002/api/sales',
-        { inventory_id, show_id, quantity_sold, total_amount, payment_method },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+
+      console.log('Submitting Sale:', {
+        inventory_id,
+        show_id,
+        quantity_sold,
+        total_amount,
+        payment_method,
+        size,
+      });
+
+      const saleData = {
+        inventory_id,
+        show_id,
+        quantity_sold,
+        total_amount,
+        payment_method,
+      };
+
+      if (size !== undefined) {
+        saleData.size = size;
+      }
+
+      const response = await axios.post('http://localhost:5002/api/sales', saleData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       recordedSales.value.push(response.data.sale);
       calculateTotals();
@@ -118,17 +145,21 @@ export const useSalesStore = defineStore('sales', () => {
       const token = authStore.token;
 
       for (const sale of Object.values(transactionSales.value)) {
-        await axios.post(
-          'http://localhost:5002/api/sales',
-          {
-            inventory_id: sale.id,
-            show_id: showId,
-            quantity_sold: sale.quantity,
-            total_amount: sale.quantity * sale.price,
-            payment_method: paymentMethod,
-          },
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
+        const saleData = {
+          inventory_id: sale.id,
+          show_id: showId,
+          quantity_sold: sale.quantity,
+          total_amount: sale.quantity * sale.price,
+          payment_method: paymentMethod,
+        };
+
+        if (sale.size !== undefined) {
+          saleData.size = sale.size;
+        }
+
+        await axios.post('http://localhost:5002/api/sales', saleData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
       }
 
       transactionSales.value = {};

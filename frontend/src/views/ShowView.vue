@@ -149,12 +149,27 @@ const softItemsArray = computed(() => {
     if (sale.sizes) {
       Object.entries(sale.sizes).forEach(([size, sizeData]) => {
         if (sizeData.quantity > 0) {
+          const inventoryItem = inventory.value.find((item) => Number(item.id) === Number(id));
+
+          if (!inventoryItem) {
+            console.warn(`⚠️ No inventory item found for ID: ${id}`);
+            return;
+          }
+
+          const sizeRecord = inventoryItem.sizes.find((s) => s.size === size);
+
+          if (!sizeRecord) {
+            console.warn(`⚠️ No matching size found for ${sale.name} size ${size}`);
+            return;
+          }
+
           softSales.push({
-            id,
-            name: `${sale.name} (${size})`,
-            size,
-            price: Number(sale.price) || getItemPrice(id),
+            id: Number(id),
+            name: sale.name,
+            size: size,
+            price: parseFloat(sale.price || getItemPrice(id)).toFixed(2),
             qty: sizeData.quantity,
+            remainingStock: sizeRecord.quantity - sizeData.quantity,
           });
         }
       });
@@ -193,7 +208,7 @@ const getItemPrice = (id) => {
 };
 
 const formatShowDate = (dateString) => {
-  if (!dateString) return 'N/A'; // Handle missing date
+  if (!dateString) return 'N/A';
 
   const parsedDate = new Date(dateString);
   return isNaN(parsedDate.getTime()) ? 'Invalid Date' : format(parsedDate, 'MMM dd, yyyy');
@@ -209,7 +224,14 @@ const fetchShowDetails = async () => {
 
 const submitSale = async () => {
   for (const sale of filteredSales.value) {
-    await salesStore.addSale(sale.id, showId, sale.qty, sale.qty * sale.price, paymentMethod.value);
+    await salesStore.addSale(
+      sale.id,
+      showId,
+      sale.qty,
+      sale.qty * sale.price,
+      paymentMethod.value,
+      sale.size || undefined
+    );
   }
 
   salesStore.resetTransactionSales();

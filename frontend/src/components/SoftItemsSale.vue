@@ -141,7 +141,7 @@ const updateTransaction = (id, size, itemName, price, quantity) => {
   if (!salesStore.transactionSales[id].sizes[size]) {
     salesStore.transactionSales[id].sizes[size] = { quantity: 0 };
   }
-
+  console.log(salesStore.transactionSales[id].sizes[size].quantity)
   salesStore.transactionSales[id].sizes[size].quantity = Number(quantity) || 0;
 };
 
