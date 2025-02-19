@@ -65,16 +65,37 @@
       >
         <div class="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full text-[#393f4d] text-center">
           <h2 class="text-2xl font-semibold mb-4">🛒 Transaction Summary</h2>
-          <div v-for="sale in filteredSales" :key="sale.id">
+
+          <div v-for="sale in filteredSales" :key="sale.id" class="mb-4">
             <p>
               {{ getItemName(sale.id, sale.size) }} x {{ sale.qty }} - ${{ getItemPrice(sale.id) }}
             </p>
+
+            <!-- 🔽 Size Dropdown for Bundles with Soft Items -->
+            <div v-if="sale.softItemSizes" class="mt-2">
+              <label class="block text-sm font-medium text-gray-700">
+                Select Size for Soft Item in Bundle:
+              </label>
+              <select v-model="sale.selectedSize" class="mt-1 p-2 border rounded w-full">
+                <option value="" disabled selected>-- Select Size --</option>
+                <option
+                  v-for="size in Object.values(sale.softItemSizes).flat()"
+                  :key="size.size"
+                  :value="size.size"
+                >
+                  {{ size.size }} (Stock: {{ size.stock }})
+                </option>
+              </select>
+            </div>
           </div>
+
           <p class="font-bold mt-4">Subtotal: ${{ subtotal }}</p>
+
           <div class="flex gap-4 mt-4 justify-center">
             <label><input type="radio" v-model="paymentMethod" value="cash" /> Cash</label>
             <label><input type="radio" v-model="paymentMethod" value="card" /> Card</label>
           </div>
+
           <div class="mt-6 flex justify-between">
             <button class="btn btn-error" @click="cartOpen = false">Cancel</button>
             <button class="btn btn-success" @click="submitSale">✅ Submit Sale</button>
@@ -133,7 +154,10 @@ onMounted(async () => {
 
 const hardItemsArray = computed(() => {
   return Object.values(salesStore.transactionSales)
-    .filter((sale) => sale.quantity > 0)
+    .filter((sale) => {
+      const inventoryItem = inventory.value.find((item) => Number(item.id) === Number(sale.id));
+      return inventoryItem && inventoryItem.type === 'hard';
+    })
     .map((sale) => ({
       id: sale.id,
       name: sale.name || getItemName(sale.id),
@@ -175,11 +199,61 @@ const softItemsArray = computed(() => {
       });
     }
   });
-
   return softSales;
 });
 
-const filteredSales = computed(() => [...hardItemsArray.value, ...softItemsArray.value]);
+const bundlesArray = computed(() => {
+  let bundleSales = [];
+  let softItemSizes = {};
+
+  Object.entries(salesStore.transactionSales).forEach(([id, sale]) => {
+    if (sale.quantity > 0) {
+      const inventoryItem = inventory.value.find((item) => Number(item.id) === Number(id));
+
+      if (!inventoryItem) {
+        console.warn(`⚠️ No inventory item found for Bundle ID: ${id}`);
+        return;
+      }
+
+      if (!inventoryItem.items || !Array.isArray(inventoryItem.items)) {
+        console.warn(`⚠️ No items array found for bundle ID ${id}, skipping...`);
+        return;
+      }
+
+      inventoryItem.items.forEach((bundleItem) => {
+        const foundItem = inventory.value.find((item) => Number(item.id) === Number(bundleItem.id));
+
+        if (!foundItem) {
+          console.warn(`⚠️ Missing inventory item in bundle: ${bundleItem.id}`);
+          return;
+        }
+
+        if (foundItem.type === 'soft') {
+          softItemSizes[bundleItem.id] = foundItem.sizes.map((sizeObj) => ({
+            size: sizeObj.size,
+            stock: sizeObj.quantity,
+          }));
+        }
+      });
+
+      bundleSales.push({
+        id: Number(id),
+        name: inventoryItem.name,
+        price: parseFloat(inventoryItem.price).toFixed(2),
+        qty: sale.quantity,
+        softItemSizes,
+      });
+    }
+  });
+
+  return bundleSales;
+});
+
+const filteredSales = computed(() => [
+  ...hardItemsArray.value,
+  ...softItemsArray.value,
+  ...bundlesArray.value,
+]);
 
 const subtotal = computed(() => {
   return filteredSales.value.reduce((sum, sale) => sum + sale.qty * sale.price, 0).toFixed(2);
@@ -192,7 +266,9 @@ const isTransactionValid = computed(() => {
 });
 
 const getItemName = (id, size) => {
-  const item = [...hardItems.value, ...softItems.value].find((i) => Number(i.id) === Number(id));
+  const item = [...hardItems.value, ...softItems.value, ...bundles.value].find(
+    (i) => Number(i.id) === Number(id)
+  );
 
   if (!item) {
     console.warn('⚠️ Item not found for ID:', id);
@@ -203,7 +279,9 @@ const getItemName = (id, size) => {
 };
 
 const getItemPrice = (id) => {
-  const item = [...hardItems.value, ...softItems.value].find((i) => Number(i.id) === Number(id));
+  const item = [...hardItems.value, ...softItems.value, ...bundles.value].find(
+    (i) => Number(i.id) === Number(id)
+  );
   return item ? parseFloat(item.price).toFixed(2) : '0.00';
 };
 
@@ -224,13 +302,15 @@ const fetchShowDetails = async () => {
 
 const submitSale = async () => {
   for (const sale of filteredSales.value) {
+    const saleSize = sale.size || sale.selectedSize || undefined;
+
     await salesStore.addSale(
       sale.id,
       showId,
       sale.qty,
       sale.qty * sale.price,
       paymentMethod.value,
-      sale.size || undefined
+      saleSize
     );
   }
 
@@ -242,7 +322,7 @@ const submitSale = async () => {
     successMessage.value = '';
   }, 2000);
 
-  await salesStore.fetchSales(showId);
+  await Promise.all([salesStore.fetchSales(showId), inventoryStore.fetchInventory(tourId)]);
 };
 
 const openCart = () => {

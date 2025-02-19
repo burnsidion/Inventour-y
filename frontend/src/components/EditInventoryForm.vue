@@ -108,17 +108,23 @@ const updateInventory = () => {
     alert('🚨 Name and Price are required!');
     return;
   }
-
   const updatedData = {
     id: props.inventoryItem.id,
     name: newItemName.value.trim(),
     price: updatedPrice.value,
-    sizes: updatedSizes.value.map((size) => ({
-      size: size.size,
-      quantity:
-        Number(size.newStock) +
-        Number(props.inventoryItem.sizes.find((s) => s.size === size.size)?.quantity || 0), // ✅ Fix: Ensure the quantity updates properly
-    })),
+    quantity:
+      props.inventoryItem.type === 'hard'
+        ? Number(props.inventoryItem.quantity) + Number(addedQuantity.value)
+        : undefined,
+    sizes:
+      props.inventoryItem.type === 'soft'
+        ? updatedSizes.value.map((size) => ({
+            size: size.size,
+            quantity:
+              Number(size.newStock) +
+              Number(props.inventoryItem.sizes.find((s) => s.size === size.size)?.quantity || 0),
+          }))
+        : [],
   };
 
   emit('save', updatedData);

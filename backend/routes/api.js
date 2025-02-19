@@ -519,7 +519,7 @@ router.get("/inventory", authenticateToken, async (req, res) => {
 });
 
 router.post("/inventory/update", authenticateToken, async (req, res) => {
-  const { inventory_id, new_quantity } = req.body;
+  const { inventory_id, new_quantity, new_price = null } = req.body;
 
   if (!inventory_id || new_quantity === undefined) {
     return res
@@ -530,9 +530,9 @@ router.post("/inventory/update", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE inventory 
-       SET price = $1, quantity = $2 
-       WHERE id = $3 
-       RETURNING *`,
+     SET price = $1, quantity = $2 
+     WHERE id = $3 
+     RETURNING *`,
       [new_price, new_quantity, inventory_id]
     );
 
@@ -707,7 +707,7 @@ router.post("/sales", authenticateToken, async (req, res) => {
       adjustedPrice = 0;
     }
 
-    // Check the item's type (hard or soft)
+    // Check if this is a bundle
     const itemTypeResult = await pool.query(
       `SELECT type FROM inventory WHERE id = $1`,
       [inventory_id]
@@ -720,38 +720,107 @@ router.post("/sales", authenticateToken, async (req, res) => {
 
     const itemType = itemTypeResult.rows[0].type;
 
-    // Ensure size is required only for soft items
-    if (itemType === "soft" && !size) {
-      await pool.query("ROLLBACK");
-      return res.status(400).json({ error: "Size is required for soft items" });
-    }
-
-    let inventoryResult;
-    if (itemType === "soft") {
-      // Subtract from inventory_sizes table for soft items
-      inventoryResult = await pool.query(
-        `UPDATE inventory_sizes
-         SET quantity = quantity - $1
-         WHERE inventory_id = $2 AND size = $3 AND quantity >= $1
-         RETURNING *`,
-        [quantity_sold, inventory_id, size]
+    if (itemType === "bundle") {
+      // Get all items inside the bundle
+      const bundleItems = await pool.query(
+        `SELECT item_id FROM bundle_items WHERE bundle_id = $1`,
+        [inventory_id]
       );
+
+      if (bundleItems.rows.length === 0) {
+        await pool.query("ROLLBACK");
+        return res.status(400).json({ error: "No items found in bundle" });
+      }
+
+      // Deduct inventory for each item inside the bundle
+      // Deduct inventory for each item inside the bundle
+      for (const { item_id } of bundleItems.rows) {
+        const itemTypeQuery = await pool.query(
+          `SELECT type FROM inventory WHERE id = $1`,
+          [item_id]
+        );
+        const itemType = itemTypeQuery.rows[0].type;
+
+        if (itemType === "soft") {
+          // Fetch the correct size
+          let selectedSize = size;
+          if (!selectedSize) {
+            const sizeQuery = await pool.query(
+              `SELECT size FROM inventory_sizes WHERE inventory_id = $1 AND quantity > 0 ORDER BY quantity ASC LIMIT 1`,
+              [item_id]
+            );
+            selectedSize = sizeQuery.rows[0]?.size || null;
+          }
+
+          console.log(
+            `🛠 Deducting inventory for soft item ${item_id}, size: ${selectedSize}`
+          );
+
+          if (selectedSize) {
+            const updateResult = await pool.query(
+              `UPDATE inventory_sizes
+               SET quantity = quantity - $1
+               WHERE inventory_id = $2 AND size = $3 AND quantity >= $1
+               RETURNING *`,
+              [quantity_sold, item_id, selectedSize]
+            );
+
+            if (updateResult.rows.length === 0) {
+              console.warn(
+                `⚠️ Not enough stock for soft item ${item_id}, size: ${selectedSize}`
+              );
+            } else {
+              console.log(
+                `✅ Updated inventory_sizes for soft item ${item_id}, size: ${selectedSize}`
+              );
+            }
+          } else {
+            console.warn(
+              `⚠️ No valid size found for soft item ${item_id}, skipping update.`
+            );
+          }
+        } else {
+          // Deduct from inventory table for hard items (this part works fine)
+          const updateResult = await pool.query(
+            `UPDATE inventory
+           SET quantity = quantity - $1
+           WHERE id = $2 AND quantity >= $1
+           RETURNING *`,
+            [quantity_sold, item_id]
+          );
+
+          if (updateResult.rows.length === 0) {
+            console.warn(`⚠️ Not enough stock for hard item ${item_id}`);
+          } else {
+            console.log(`✅ Updated inventory for hard item ${item_id}`);
+          }
+        }
+      }
     } else {
-      // Subtract from inventory table for hard items
-      inventoryResult = await pool.query(
-        `UPDATE inventory
-         SET quantity = quantity - $1
-         WHERE id = $2 AND quantity >= $1
-         RETURNING *`,
-        [quantity_sold, inventory_id]
-      );
-    }
+      // Handle normal sales (not bundles)
+      let inventoryResult;
+      if (itemType === "soft") {
+        inventoryResult = await pool.query(
+          `UPDATE inventory_sizes
+           SET quantity = quantity - $1
+           WHERE inventory_id = $2 AND size = $3 AND quantity >= $1
+           RETURNING *`,
+          [quantity_sold, inventory_id, size]
+        );
+      } else {
+        inventoryResult = await pool.query(
+          `UPDATE inventory
+           SET quantity = quantity - $1
+           WHERE id = $2 AND quantity >= $1
+           RETURNING *`,
+          [quantity_sold, inventory_id]
+        );
+      }
 
-    if (inventoryResult.rows.length === 0) {
-      await pool.query("ROLLBACK");
-      return res
-        .status(400)
-        .json({ error: "Insufficient inventory or invalid inventory ID" });
+      if (inventoryResult.rows.length === 0) {
+        await pool.query("ROLLBACK");
+        return res.status(400).json({ error: "Insufficient inventory" });
+      }
     }
 
     // Record the sale
@@ -923,10 +992,6 @@ router.post("/inventory/bundles", authenticateToken, async (req, res) => {
 
     const bundleId = bundleResult.rows[0].id;
 
-    if (!bundleId) {
-      throw new Error("Bundle ID is undefined");
-    }
-
     let bundleQuantities = [];
 
     for (const { item_id } of items) {
@@ -934,6 +999,7 @@ router.post("/inventory/bundles", authenticateToken, async (req, res) => {
         `SELECT type FROM inventory WHERE id = $1`,
         [item_id]
       );
+
       if (!itemQuery.rows.length) continue;
 
       const itemType = itemQuery.rows[0].type;
@@ -946,11 +1012,12 @@ router.post("/inventory/bundles", authenticateToken, async (req, res) => {
         );
         itemQuantity = hardItem.rows.length ? hardItem.rows[0].quantity : 0;
       } else if (itemType === "soft") {
+        // ✅ Get the **lowest** available size quantity, NOT the sum
         const softItemSizes = await pool.query(
-          `SELECT SUM(quantity) AS total_quantity FROM inventory_sizes WHERE inventory_id = $1`,
+          `SELECT MIN(quantity) AS min_quantity FROM inventory_sizes WHERE inventory_id = $1`,
           [item_id]
         );
-        itemQuantity = softItemSizes.rows[0]?.total_quantity || 0;
+        itemQuantity = softItemSizes.rows[0]?.min_quantity || 0;
       }
 
       bundleQuantities.push(itemQuantity);
@@ -961,6 +1028,7 @@ router.post("/inventory/bundles", authenticateToken, async (req, res) => {
       );
     }
 
+    // ✅ Set bundle quantity to the **lowest** available stock of any item inside it
     const bundleQuantity =
       bundleQuantities.length > 0 ? Math.min(...bundleQuantities) : 0;
 
