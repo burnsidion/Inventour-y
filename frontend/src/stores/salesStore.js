@@ -1,10 +1,12 @@
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
 import { ref } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
-
+import { useInventoryStore } from './inventory';
 export const useSalesStore = defineStore('sales', () => {
   const authStore = useAuthStore();
+  const inventoryStore = useInventoryStore();
+  const { inventory } = storeToRefs(inventoryStore);
   const recordedSales = ref([]);
   const transactionSales = ref({});
   const totalSales = ref({});
@@ -100,33 +102,37 @@ export const useSalesStore = defineStore('sales', () => {
     try {
       const token = authStore.token;
 
-      console.log('Submitting Sale:', {
-        inventory_id,
-        show_id,
-        quantity_sold,
-        total_amount,
-        payment_method,
-        size,
-      });
+      // Fetch inventory item to check its type
+      const inventoryItem = inventory.value.find(
+        (item) => Number(item.id) === Number(inventory_id),
+      );
 
+      if (!inventoryItem) {
+        console.error(`🚨 Inventory item not found: ${inventory_id}`);
+        return;
+      }
+
+      // Ensure size is provided for soft items
+      if (inventoryItem.type === 'soft' && !size) {
+        console.error(`🚨 Missing size selection for soft item: ${inventoryItem.name}`);
+        return;
+      }
+
+      // ✅ Send a single sale request, regardless of item type
       const saleData = {
         inventory_id,
         show_id,
         quantity_sold,
         total_amount,
         payment_method,
+        size: inventoryItem.type === 'soft' ? size : null, // Only include size for soft items
       };
 
-      if (size !== undefined) {
-        saleData.size = size;
-      }
-
-      const response = await axios.post('http://localhost:5002/api/sales', saleData, {
+      await axios.post('http://localhost:5002/api/sales', saleData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      recordedSales.value.push(response.data.sale);
-      calculateTotals();
+      console.log(`✅ Sale recorded: ${inventoryItem.name} x ${quantity_sold}`);
     } catch (error) {
       console.error('Error recording sale:', error.response?.data || error.message);
     }
