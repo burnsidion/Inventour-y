@@ -8,6 +8,7 @@ import CreateShowView from '@/views/CreateShowView.vue';
 import InventoryView from '@/views/InventoryView.vue';
 import InventoryForm from '@/components/InventoryForm.vue';
 import ProfileView from '@/views/ProfileView.vue';
+import ShowsSummaryView from '@/views/ShowSummaryView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -64,6 +65,12 @@ const router = createRouter({
       path: '/inventory/add',
       name: 'AddInventory',
       component: InventoryForm,
+    },
+    {
+      path: '/shows/:id/summary',
+      name: 'ShowSummaryView',
+      component: ShowsSummaryView,
+      meta: { requiresAuth: true },
     },
   ],
 });
