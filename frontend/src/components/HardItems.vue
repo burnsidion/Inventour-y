@@ -21,7 +21,7 @@
     <!-- Skeleton Card Component  -->
     <template v-if="isLoading">
       <div class="flex flex-col space-y-4">
-        <SkeletonCard v-for="n in (hardItemsList.length || 3, 6)" :key="n" :height="150"/>
+        <SkeletonCard v-for="n in (hardItemsList.length || 3, 6)" :key="n" :height="150" />
       </div>
     </template>
 
@@ -119,17 +119,25 @@ const formattedPrice = (price) => {
 };
 
 const handleSaveChanges = async (updatedData) => {
+  editingItem.value = null;
+  modalOpen.value = false;
+  isLoading.value = true;
+
   const completeData = {
     ...updatedData,
     quantity: updatedData.quantity ?? editingItem.value?.quantity ?? 0,
   };
 
-  editingItem.value = null;
-  modalOpen.value = false;
   const success = await saveInventoryChanges(completeData, route.params.id);
   if (!success) {
     alert('Failed to update item, please try again');
   }
+
+  await fetchInventory(route.params.id);
+
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 300);
 };
 
 const toggleEditForm = (item) => {
