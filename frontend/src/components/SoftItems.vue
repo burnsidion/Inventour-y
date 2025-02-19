@@ -84,7 +84,7 @@
           </template>
         </draggable>
       </template>
-      
+
       <!-- Zero State -->
       <template v-else>
         <p class="text-gray-500 text-center">
@@ -172,11 +172,18 @@ const handleSaveChanges = async (updatedData) => {
 
   editingItem.value = null;
   modalOpen.value = false;
+  isLoading.value = true;
 
   const success = await saveInventoryChanges(updatedData, tourId);
   if (!success) {
     alert('Failed to update item, please try again');
   }
+
+  await fetchInventory(route.params.id);
+
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 300);
 };
 
 const deleteItem = async (itemId) => {
