@@ -8,17 +8,14 @@
     <div
       class="flex flex-col sm:flex-row gap-4 mb-4 justify-center sm:justify-center content-center items-center"
     >
-      <div class="flex justify-center">
-        <router-link to="/" class="btn btn-primary"> ← Back to Home Page </router-link>
-      </div>
-      <div class="text-center">
-        <button class="btn btn-primary px-6 py-2" :disabled="!isTransactionValid" @click="openCart">
-          🛒 Start Transaction
-        </button>
-      </div>
-      <div>
-        <button @click="clearAll()" class="btn btn-primary px-6 py-2">Clear All Quantities</button>
-      </div>
+      <router-link to="/" class="btn btn-primary"> ← Back to Home Page </router-link>
+
+      <button class="btn btn-primary px-6 py-2" :disabled="!isTransactionValid" @click="openCart">
+        🛒 Start Transaction
+      </button>
+
+      <button @click="clearAll()" class="btn btn-primary px-6 py-2">Clear All Quantities</button>
+      <button @click="closeOutShow()" class="btn btn-primary px-6 py-2">Close Out Show</button>
     </div>
 
     <!-- Sales Summary -->
@@ -113,7 +110,8 @@ import { storeToRefs } from 'pinia';
 import { useSalesStore } from '@/stores/salesStore';
 import { useTourStore } from '@/stores/tour';
 import { useInventoryStore } from '@/stores/inventory';
-import { useRoute } from 'vue-router';
+import { useShowSummariesStore } from '@/stores/showSummariesStore';
+import { useRoute, useRouter } from 'vue-router';
 import { format } from 'date-fns';
 
 import HardItemsSale from '@/components/HardItemsSale.vue';
@@ -123,7 +121,9 @@ import BundleItemsSale from '@/components/BundleItemsSale.vue';
 const salesStore = useSalesStore();
 const tourStore = useTourStore();
 const inventoryStore = useInventoryStore();
+const showSummaryStore = useShowSummariesStore();
 const route = useRoute();
+const router = useRouter();
 
 const tourId = route.query.tour_id || null;
 const showId = route.params.id;
@@ -331,5 +331,14 @@ const openCart = () => {
 
 const clearAll = () => {
   salesStore.transactionSales = {};
+};
+
+const closeOutShow = async () => {
+  try {
+    await showSummaryStore.closeShow(showId);
+    router.push(`/shows/${showId}/summary`);
+  } catch (error) {
+    console.error('Error closing out show', error);
+  }
 };
 </script>
