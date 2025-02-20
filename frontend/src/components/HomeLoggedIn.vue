@@ -6,6 +6,13 @@
     <div class="flex-1 p-4 md:p-6">
       <h1 class="text-3xl font-bold mb-6 text-center">Your Tours</h1>
 
+      <!-- Create Tour Button -->
+      <div class="flex justify-center my-6">
+        <button @click="createTour" class="btn btn-primary w-full sm:w-auto">
+          ➕ Create New Tour
+        </button>
+      </div>
+
       <!-- Skeleton Loader Component  -->
       <template v-if="isLoading">
         <div class="flex flex-col space-y-2">
@@ -106,13 +113,6 @@
 
       <!-- No Tours Placeholder -->
       <div v-else class="text-gray-500 text-center text-lg mt-6">No tours yet.</div>
-
-      <!-- Create Tour Button -->
-      <div class="flex justify-center mt-6">
-        <button @click="createTour" class="btn btn-primary w-full sm:w-auto">
-          ➕ Create New Tour
-        </button>
-      </div>
     </div>
   </div>
 </template>
