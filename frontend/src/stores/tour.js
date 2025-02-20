@@ -134,15 +134,15 @@ export const useTourStore = defineStore('tour', () => {
       const response = await axios.get(`http://localhost:5002/api/shows?tour_id=${tourId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
+  
       return response.data;
     } catch (error) {
       if (error.response?.status === 404) {
-        console.warn(`📌 No shows found for tour ${tourId}. Returning an empty array.`);
+        console.warn(`📌 No open shows found for tour ${tourId}. Returning an empty array.`);
         return [];
       } else {
         console.error(
-          `❌ Critical error fetching shows for tour ${tourId}:`,
+          `❌ Critical error fetching open shows for tour ${tourId}:`,
           error.response?.data || error.message,
         );
         throw error;
