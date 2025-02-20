@@ -8,7 +8,8 @@ import CreateShowView from '@/views/CreateShowView.vue';
 import InventoryView from '@/views/InventoryView.vue';
 import InventoryForm from '@/components/InventoryForm.vue';
 import ProfileView from '@/views/ProfileView.vue';
-import ShowsSummaryView from '@/views/ShowSummaryView.vue';
+import ShowSummaryView from '@/views/ShowSummaryView.vue';
+import ClosedShowsView from '@/views/ClosedShowsView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -67,10 +68,14 @@ const router = createRouter({
       component: InventoryForm,
     },
     {
+      path: '/shows/closed',
+      name: 'ClosedShowsView',
+      component: ClosedShowsView,
+    },
+    {
       path: '/shows/:id/summary',
       name: 'ShowSummaryView',
-      component: ShowsSummaryView,
-      meta: { requiresAuth: true },
+      component: ShowSummaryView,
     },
   ],
 });
