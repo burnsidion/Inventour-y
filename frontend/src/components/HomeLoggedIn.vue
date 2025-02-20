@@ -45,19 +45,24 @@
               </div>
             </div>
             <!-- Shows List -->
-            <div v-if="tour.shows && tour.shows.length > 0" class="mt-2">
+            <div
+              v-if="tour.shows && tour.shows.length > 0"
+              class="mt-2"
+              :class="{ 'open-dropdown': activeDropdown === tour.id }"
+            >
               <h3 class="text-[#393f4d] font-semibold text-center md:text-left">
                 Shows:
                 <span
                   class="text-blue-500 cursor-pointer hover:underline"
                   @click="expandShows(tour.id)"
                 >
-                  {{ showsExpanded[tour.id] ? 'Collapse' : 'Expand' }}
+                  {{ activeDropdown === tour.id ? 'Collapse' : 'Expand' }}
                 </span>
               </h3>
 
               <div
-                v-if="showsExpanded[tour.id]"
+                v-if="activeDropdown === tour.id"
+                :class="`tour-dropdown-${tour.id}`"
                 class="absolute md:absolute left-1/2 md:left-auto transform -translate-x-1/2 md:translate-x-0 mt-1 bg-ivory border border-gray-300 shadow-md rounded-md p-2 min-w-[18rem] max-w-[24rem] overflow-y-auto z-50"
                 :style="{ maxHeight: getMaxHeight(tour.id) }"
               >
@@ -113,7 +118,7 @@
 </template>
   
 <script setup>
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, onUnmounted, ref, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { format } from 'date-fns';
 import { useRouter } from 'vue-router';
@@ -128,8 +133,8 @@ const router = useRouter();
 const tourStore = useTourStore();
 const salesStore = useSalesStore();
 
-const showsExpanded = ref({});
 const isLoading = ref(true);
+const activeDropdown = ref(null);
 
 const getMaxHeight = computed(() => {
   return (tourId) => {
@@ -161,7 +166,25 @@ const createTour = () => {
 };
 
 const expandShows = (tourId) => {
-  showsExpanded.value[tourId] = !showsExpanded.value[tourId];
+  if (activeDropdown.value === tourId) {
+    activeDropdown.value = null;
+    document.removeEventListener('click', handleClickOutside);
+  } else {
+    activeDropdown.value = tourId;
+
+    setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 0);
+  }
+};
+
+const handleClickOutside = (event) => {
+  const dropdown = document.querySelector(`.tour-dropdown-${activeDropdown.value}`);
+
+  if (!dropdown || !dropdown.contains(event.target)) {
+    activeDropdown.value = null;
+    document.removeEventListener('click', handleClickOutside);
+  }
 };
 
 onMounted(async () => {
@@ -173,5 +196,9 @@ onMounted(async () => {
   setTimeout(() => {
     isLoading.value = false;
   }, 1000);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
 });
 </script>

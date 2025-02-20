@@ -332,25 +332,32 @@ router.post("/shows", authenticateToken, async (req, res) => {
 
 router.get("/shows", authenticateToken, async (req, res) => {
   const { tour_id } = req.query;
-
-  if (!tour_id) {
-    return res.status(400).json({ error: "Missing required tour_id" });
-  }
+  const userId = req.user.id;
 
   try {
     const result = await pool.query(
-      "SELECT * FROM shows WHERE tour_id = $1 ORDER BY date ASC",
-      [tour_id]
+      `
+      SELECT 
+        s.id, 
+        s.venue, 
+        s.date 
+      FROM shows s
+      LEFT JOIN show_summaries ss ON s.id = ss.show_id
+      JOIN tours t ON s.tour_id = t.id
+      WHERE s.tour_id = $1 AND t.user_id = $2 AND ss.show_id IS NULL
+      ORDER BY s.date ASC;
+      `,
+      [tour_id, userId]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "No shows found for this tour" });
+      return res.status(404).json({ error: "No open shows found" });
     }
 
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error("Error fetching shows:", error);
-    res.status(500).json({ error: "Failed to fetch shows" });
+    console.error("Error fetching open shows:", error);
+    res.status(500).json({ error: "Failed to fetch open shows" });
   }
 });
 
