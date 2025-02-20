@@ -12,8 +12,8 @@
       <RouterLink to="/inventory" class="block px-4 py-2 hover:bg-gray-700 rounded"
         >📦 Inventory</RouterLink
       >
-      <RouterLink to="/shows" class="block px-4 py-2 hover:bg-gray-700 rounded"
-        >🎤 Shows</RouterLink
+      <RouterLink to="/shows/closed" class="block px-4 py-2 hover:bg-gray-700 rounded"
+        >📊 Closed Shows</RouterLink
       >
       <LogoutButton class="block px-4 py-2 hover:bg-red-500 rounded">🚪 Logout</LogoutButton>
     </nav>

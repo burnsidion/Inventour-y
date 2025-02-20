@@ -354,6 +354,41 @@ router.get("/shows", authenticateToken, async (req, res) => {
   }
 });
 
+router.get("/shows/closed", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT 
+        s.id AS show_id, 
+        s.venue, 
+        s.date, 
+        t.id AS tour_id, 
+        t.name AS tour_name, 
+        t.band_name, 
+        ss.total_sales, 
+        ss.total_transactions
+      FROM show_summaries ss
+      JOIN shows s ON ss.show_id = s.id
+      JOIN tours t ON s.tour_id = t.id
+      WHERE t.user_id = $1
+      ORDER BY s.date DESC;
+    `,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "No closed shows found" });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching closed shows:", error);
+    res.status(500).json({ error: "Failed to fetch closed shows" });
+  }
+});
+
 router.get("/shows/:id", authenticateToken, async (req, res) => {
   const showId = req.params.id;
 
@@ -605,7 +640,7 @@ router.put("/inventory/:id", authenticateToken, async (req, res) => {
         `SELECT size, quantity FROM inventory_sizes WHERE inventory_id = $1`,
         [id]
       );
-      updatedItem.sizes = sizesResult.rows; // ✅ Only sets sizes if updatedItem is valid
+      updatedItem.sizes = sizesResult.rows;
     }
 
     res.json({ message: "Inventory item updated", inventory: updatedItem });
@@ -620,9 +655,8 @@ router.delete("/inventory/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
 
   try {
-    await pool.query("BEGIN"); // Start transaction
+    await pool.query("BEGIN");
 
-    // Lock the inventory item to prevent concurrent modifications
     const itemResult = await pool.query(
       "SELECT type FROM inventory WHERE id = $1 FOR UPDATE",
       [id]
@@ -635,14 +669,12 @@ router.delete("/inventory/:id", authenticateToken, async (req, res) => {
 
     const itemType = itemResult.rows[0].type;
 
-    // First, delete related sizes if it's a soft item
     if (itemType === "soft") {
       await pool.query("DELETE FROM inventory_sizes WHERE inventory_id = $1", [
         id,
       ]);
     }
 
-    // Then delete the inventory item itself
     const deleteResult = await pool.query(
       "DELETE FROM inventory WHERE id = $1 RETURNING *",
       [id]
@@ -653,14 +685,14 @@ router.delete("/inventory/:id", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: "Failed to delete item" });
     }
 
-    await pool.query("COMMIT"); // Commit transaction
+    await pool.query("COMMIT");
 
     res.status(200).json({
       message: "Item deleted successfully",
       deletedItem: deleteResult.rows[0],
     });
   } catch (error) {
-    await pool.query("ROLLBACK"); // Rollback if anything fails
+    await pool.query("ROLLBACK");
     console.error("❌ Error deleting item:", error);
     res.status(500).json({ error: "Failed to delete item" });
   }
@@ -707,7 +739,6 @@ router.post("/sales", authenticateToken, async (req, res) => {
       adjustedPrice = 0;
     }
 
-    // Check if this is a bundle
     const itemTypeResult = await pool.query(
       `SELECT type FROM inventory WHERE id = $1`,
       [inventory_id]
@@ -721,7 +752,6 @@ router.post("/sales", authenticateToken, async (req, res) => {
     const itemType = itemTypeResult.rows[0].type;
 
     if (itemType === "bundle") {
-      // Get all items inside the bundle
       const bundleItems = await pool.query(
         `SELECT item_id FROM bundle_items WHERE bundle_id = $1`,
         [inventory_id]
@@ -732,8 +762,6 @@ router.post("/sales", authenticateToken, async (req, res) => {
         return res.status(400).json({ error: "No items found in bundle" });
       }
 
-      // Deduct inventory for each item inside the bundle
-      // Deduct inventory for each item inside the bundle
       for (const { item_id } of bundleItems.rows) {
         const itemTypeQuery = await pool.query(
           `SELECT type FROM inventory WHERE id = $1`,
@@ -742,7 +770,6 @@ router.post("/sales", authenticateToken, async (req, res) => {
         const itemType = itemTypeQuery.rows[0].type;
 
         if (itemType === "soft") {
-          // Fetch the correct size
           let selectedSize = size;
           if (!selectedSize) {
             const sizeQuery = await pool.query(
@@ -780,7 +807,6 @@ router.post("/sales", authenticateToken, async (req, res) => {
             );
           }
         } else {
-          // Deduct from inventory table for hard items (this part works fine)
           const updateResult = await pool.query(
             `UPDATE inventory
            SET quantity = quantity - $1
@@ -797,7 +823,6 @@ router.post("/sales", authenticateToken, async (req, res) => {
         }
       }
     } else {
-      // Handle normal sales (not bundles)
       let inventoryResult;
       if (itemType === "soft") {
         inventoryResult = await pool.query(
@@ -823,7 +848,6 @@ router.post("/sales", authenticateToken, async (req, res) => {
       }
     }
 
-    // Record the sale
     const salesResult = await pool.query(
       `INSERT INTO sales (inventory_id, show_id, quantity_sold, total_amount, payment_method, size)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -1007,7 +1031,6 @@ router.post("/shows/:show_id/close", authenticateToken, async (req, res) => {
   try {
     await pool.query("BEGIN");
 
-    // ✅ Step 1: Validate the show exists
     const showCheck = await pool.query("SELECT * FROM shows WHERE id = $1", [
       show_id,
     ]);
@@ -1016,7 +1039,6 @@ router.post("/shows/:show_id/close", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: "Show not found" });
     }
 
-    // ✅ Step 2: Get total sales, transactions, cash/card breakdown
     const salesData = await pool.query(
       `
       SELECT SUM(total_amount) AS total_sales,
@@ -1032,7 +1054,6 @@ router.post("/shows/:show_id/close", authenticateToken, async (req, res) => {
     const { total_sales, total_transactions, total_cash, total_card } =
       salesData.rows[0];
 
-    // ✅ Step 3: Get best-selling items (Top 3)
     const bestSellingItems = await pool.query(
       `
       SELECT inventory.name, SUM(sales.quantity_sold) AS total_sold
@@ -1046,7 +1067,6 @@ router.post("/shows/:show_id/close", authenticateToken, async (req, res) => {
       [show_id]
     );
 
-    // ✅ Step 4: Get all items sold (including sizes for soft items)
     const itemsSold = await pool.query(
       `
       SELECT inventory.name, sales.size, SUM(sales.quantity_sold) AS total_sold
@@ -1059,7 +1079,6 @@ router.post("/shows/:show_id/close", authenticateToken, async (req, res) => {
       [show_id]
     );
 
-    // ✅ Step 5: Insert the summary into `show_summaries`
     await pool.query(
       `
       INSERT INTO show_summaries (show_id, total_sales, total_cash, total_card, total_transactions, best_selling_items, items_sold)
@@ -1087,16 +1106,15 @@ router.post("/shows/:show_id/close", authenticateToken, async (req, res) => {
 
 router.get("/shows/:show_id/summary", authenticateToken, async (req, res) => {
   const { show_id } = req.params;
-  const userId = req.user.id; // Get the user ID from the token
+  const userId = req.user.id;
 
   try {
-    // ✅ Step 1: Validate that the show exists AND belongs to the logged-in user
     const showCheck = await pool.query(
       `
-      SELECT shows.id 
-      FROM shows
-      JOIN tours ON shows.tour_id = tours.id
-      WHERE shows.id = $1 AND tours.user_id = $2
+      SELECT s.id, s.venue, s.date, t.name AS tour_name, t.band_name
+      FROM shows s
+      JOIN tours t ON s.tour_id = t.id
+      WHERE s.id = $1 AND t.user_id = $2
     `,
       [show_id, userId]
     );
@@ -1105,7 +1123,6 @@ router.get("/shows/:show_id/summary", authenticateToken, async (req, res) => {
       return res.status(403).json({ error: "Unauthorized or show not found" });
     }
 
-    // ✅ Step 2: Retrieve the summary data
     const summaryResult = await pool.query(
       "SELECT * FROM show_summaries WHERE show_id = $1",
       [show_id]
@@ -1115,8 +1132,18 @@ router.get("/shows/:show_id/summary", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: "No summary found for this show" });
     }
 
-    // ✅ Step 3: Send the summary as a response
-    res.status(200).json(summaryResult.rows[0]);
+    const showDetails = showCheck.rows[0];
+    const summaryData = summaryResult.rows[0];
+
+    const response = {
+      ...summaryData,
+      venue: showDetails.venue,
+      date: showDetails.date,
+      tour_name: showDetails.tour_name,
+      band_name: showDetails.band_name,
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     console.error("Error fetching show summary:", error);
     res.status(500).json({ error: "Failed to fetch show summary" });
