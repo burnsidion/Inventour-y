@@ -6,6 +6,7 @@
       <p>Loading closed shows...</p>
     </div>
 
+    <!-- Closed Shows -->
     <div v-else-if="closedShows.length > 0">
       <div v-for="tour in groupedShows" :key="tour.tour_id" class="mb-6">
         <h2 class="text-xl font-bold mb-2">{{ tour.tour_name }}</h2>
@@ -28,27 +29,27 @@
       </div>
     </div>
 
+    <!-- No closed shows found  -->
     <div v-else class="text-center text-gray-500">No closed shows found.</div>
   </div>
 </template>
   
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useShowSummariesStore } from '@/stores/showSummariesStore';
 import ShowSummaryCard from '@/components/ShowSummaryCard.vue';
 
 const showSummariesStore = useShowSummariesStore();
 const isLoading = ref(true);
 const expandedShows = ref({});
+const { closedShows } = storeToRefs(showSummariesStore);
 
 onMounted(async () => {
   await showSummariesStore.fetchClosedShows();
   isLoading.value = false;
 });
 
-const closedShows = computed(() => showSummariesStore.summaries);
-
-// Group by tour
 const groupedShows = computed(() => {
   const grouped = {};
   closedShows.value.forEach((show) => {
@@ -60,7 +61,6 @@ const groupedShows = computed(() => {
   return Object.values(grouped);
 });
 
-// Expand/Collapse
 const toggleShow = (showId) => {
   expandedShows.value[showId] = !expandedShows.value[showId];
 };

@@ -27,20 +27,39 @@ export const useShowSummariesStore = defineStore('showSummaries', () => {
   };
 
   const fetchClosedShows = async () => {
-    console.log("HELLLOOOO")
+    console.log('📌 Fetching closed shows...');
     try {
       const token = authStore.token;
-      console.log("📌 Fetching closed shows...");
-  
-      const response = await axios.get("http://localhost:5002/api/shows/closed", {
+
+      const response = await axios.get('http://localhost:5002/api/shows/closed', {
         headers: { Authorization: `Bearer ${token}` },
       });
-  
-      console.log("✅ Closed shows response:", response.data);
-      summaries.value = response.data;
+
+      closedShows.value = response.data;
       return response.data;
     } catch (error) {
-      console.error("❌ Error fetching closed shows:", error.response?.data || error);
+      console.error('❌ Error fetching closed shows:', error.response?.data || error);
+      return null;
+    }
+  };
+
+  const closeShow = async (showId) => {
+    try {
+      const token = authStore.token;
+
+      const response = await axios.post(
+        `http://localhost:5002/api/shows/${showId}/close`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      await fetchClosedShows();
+
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error closing show:', error.response?.data || error);
       return null;
     }
   };
@@ -51,5 +70,6 @@ export const useShowSummariesStore = defineStore('showSummaries', () => {
     closedShows,
     fetchShowSummary,
     fetchClosedShows,
+    closeShow,
   };
 });
