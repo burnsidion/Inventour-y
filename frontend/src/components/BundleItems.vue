@@ -26,7 +26,6 @@
     <!-- Only render content if not loading -->
     <template v-if="!isLoading">
       <!-- Check if there are hard items -->
-
       <template v-if="bundlesList.length > 0">
         <draggable
           v-if="expanded"

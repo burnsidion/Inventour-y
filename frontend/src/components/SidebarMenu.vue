@@ -1,5 +1,11 @@
 <template>
   <aside class="w-64 h-screen bg-secondary p-6 text-white">
+    <button
+      @click="$emit('closeMenu')"
+      class="absolute top-4 right-4 md:hidden bg-gray-700 text-white p-2 rounded"
+    >
+      ❌
+    </button>
     <h2 class="text-lg font-bold mb-6">Menu</h2>
 
     <nav class="space-y-2">
@@ -19,4 +25,8 @@
   
   <script setup>
 import LogoutButton from './LogoutButton.vue';
+
+defineProps({
+  menuOpen: Boolean,
+});
 </script>

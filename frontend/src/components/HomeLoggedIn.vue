@@ -1,7 +1,21 @@
 <template>
-  <div class="flex min-h-screen">
-    <!-- Sidebar (Visible on larger screens) -->
-    <SidebarMenu class="w-64 hidden md:block" />
+  <div class="flex min-h-screen relative">
+    <!-- Mobile Menu Button -->
+    <button
+      v-if="!menuOpen"
+      @click="menuOpen = !menuOpen"
+      class="absolute top-4 left-4 z-1 md:hidden bg-gray-800 text-white p-2 rounded"
+    >
+      ☰
+    </button>
+
+    <!-- Sidebar (Expandable/Collapsable for mobile ONLY) -->
+    <SidebarMenu
+      class="z-2 fixed inset-y-0 left-0 bg-gray-900 text-white transform transition-transform duration-300 md:relative md:translate-x-0 h-[60vh] md:h-screen"
+      :class="{ '-translate-x-full': !menuOpen, 'translate-x-0': menuOpen }"
+      :menuOpen="menuOpen"
+      @closeMenu="menuOpen = false"
+    />
 
     <div class="flex-1 p-4 md:p-6">
       <h1 class="text-3xl font-bold mb-6 text-center">Your Tours</h1>
@@ -13,7 +27,7 @@
         </button>
       </div>
 
-      <!-- Skeleton Loader Component  -->
+      <!-- Skeleton Loader -->
       <template v-if="isLoading">
         <div class="flex flex-col space-y-2">
           <TourCardSkeleton v-for="n in tours.length" :key="n" />
@@ -33,7 +47,7 @@
             :key="tour.id"
             class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce cursor-move"
           >
-            <!-- Tour Info Section  -->
+            <!-- Tour Info -->
             <div>
               <div class="flex justify-between">
                 <h2 class="text-xl font-semibold text-center md:text-left text-[#393f4d]">
@@ -53,7 +67,7 @@
               </div>
             </div>
 
-            <!-- Closed and Current Shows Dropdowns  -->
+            <!-- Dropdowns -->
             <div
               v-if="tour.shows && tour.shows.length > 0"
               class="mt-2 flex flex-col md:flex-row justify-around"
@@ -62,7 +76,7 @@
               <ClosedShowsDropdown />
             </div>
 
-            <!-- No shows Fallback  -->
+            <!-- No Shows Placeholder -->
             <p v-else class="text-gray-500 text-center md:text-left">No shows added yet.</p>
 
             <!-- Buttons -->
@@ -86,9 +100,9 @@
     </div>
   </div>
 </template>
-  
+
 <script setup>
-import { onMounted, ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { format } from 'date-fns';
 import { useRouter } from 'vue-router';
@@ -104,8 +118,8 @@ import CurrentShows from './CurrentShowsDropdown.vue';
 const router = useRouter();
 const tourStore = useTourStore();
 const salesStore = useSalesStore();
-
 const isLoading = ref(true);
+const menuOpen = ref(false);
 
 const { tours } = storeToRefs(tourStore);
 

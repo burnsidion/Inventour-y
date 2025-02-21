@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- Expand/Collapse Button  -->
     <h3 class="text-[#393f4d] font-semibold text-center md:text-left">
       Active Shows:
       <span class="text-blue-500 cursor-pointer hover:underline" @click="expandShows(tour.id)">
@@ -12,6 +13,7 @@
       class="absolute md:absolute left-1/2 md:left-auto transform -translate-x-1/2 md:translate-x-0 mt-1 bg-ivory border border-gray-300 shadow-md rounded-md p-2 min-w-[18rem] max-w-[24rem] overflow-y-auto z-50"
       :style="{ maxHeight: getMaxHeight }"
     >
+      <!-- Active Shows List  -->
       <div
         v-for="show in tour.shows"
         :key="show.id"
