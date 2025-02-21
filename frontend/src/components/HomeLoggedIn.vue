@@ -33,6 +33,7 @@
             :key="tour.id"
             class="p-4 bg-ivory rounded-lg shadow transition-transform duration-200 lg:hover:animate-bounceOnce cursor-move"
           >
+            <!-- Tour Info Section  -->
             <div>
               <div class="flex justify-between">
                 <h2 class="text-xl font-semibold text-center md:text-left text-[#393f4d]">
@@ -52,49 +53,16 @@
               </div>
             </div>
 
+            <!-- Closed and Current Shows Dropdowns  -->
             <div
               v-if="tour.shows && tour.shows.length > 0"
-              class="mt-2 flex justify-between"
-              :class="{ 'open-dropdown': activeDropdown === tour.id }"
+              class="mt-2 flex flex-col md:flex-row justify-around"
             >
-              <h3 class="text-[#393f4d] font-semibold text-center md:text-left">
-                Shows:
-                <span
-                  class="text-blue-500 cursor-pointer hover:underline"
-                  @click="expandShows(tour.id)"
-                >
-                  {{ activeDropdown === tour.id ? 'Collapse' : 'Expand' }}
-                </span>
-              </h3>
-
-              <div
-                v-if="activeDropdown === tour.id"
-                :class="`tour-dropdown-${tour.id}`"
-                class="absolute md:absolute left-1/2 md:left-auto transform -translate-x-1/2 md:translate-x-0 mt-1 bg-ivory border border-gray-300 shadow-md rounded-md p-2 min-w-[18rem] max-w-[24rem] overflow-y-auto z-50"
-                :style="{ maxHeight: getMaxHeight(tour.id) }"
-              >
-                <div
-                  v-for="show in tour.shows"
-                  :key="show.id"
-                  class="flex items-center justify-between whitespace-nowrap px-2 py-1"
-                >
-                  <router-link
-                    :to="`/shows/${show.id}?tour_id=${tour.id}`"
-                    class="text-blue-500 hover:underline block"
-                  >
-                    📍 {{ show.venue }} - {{ formatTourDate(show.date) }}
-                  </router-link>
-                  <button
-                    @click="tourStore.deleteShow(tour.id, show.id)"
-                    class="text-red-500 hover:text-red-700 ml-6 px-2"
-                  >
-                    🗑
-                  </button>
-                </div>
-              </div>
+              <CurrentShows :tour="tour" />
               <ClosedShowsDropdown />
             </div>
 
+            <!-- No shows Fallback  -->
             <p v-else class="text-gray-500 text-center md:text-left">No shows added yet.</p>
 
             <!-- Buttons -->
@@ -120,7 +88,7 @@
 </template>
   
 <script setup>
-import { onMounted, onUnmounted, ref, computed } from 'vue';
+import { onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { format } from 'date-fns';
 import { useRouter } from 'vue-router';
@@ -131,21 +99,13 @@ import draggable from 'vuedraggable';
 import SidebarMenu from '@/components/SidebarMenu.vue';
 import TourCardSkeleton from './TourCardSkeleton.vue';
 import ClosedShowsDropdown from './ClosedShowsDropdown.vue';
+import CurrentShows from './CurrentShowsDropdown.vue';
 
 const router = useRouter();
 const tourStore = useTourStore();
 const salesStore = useSalesStore();
 
 const isLoading = ref(true);
-const activeDropdown = ref(null);
-
-const getMaxHeight = computed(() => {
-  return (tourId) => {
-    const tour = tours.value.find((t) => t.id === tourId);
-    if (!tour || !tour.shows) return '0';
-    return tour.shows.length > 5 ? '12rem' : `${tour.shows.length * 3}rem`;
-  };
-});
 
 const { tours } = storeToRefs(tourStore);
 
@@ -168,28 +128,6 @@ const createTour = () => {
   router.push('/tours/create');
 };
 
-const expandShows = (tourId) => {
-  if (activeDropdown.value === tourId) {
-    activeDropdown.value = null;
-    document.removeEventListener('click', handleClickOutside);
-  } else {
-    activeDropdown.value = tourId;
-
-    setTimeout(() => {
-      document.addEventListener('click', handleClickOutside);
-    }, 0);
-  }
-};
-
-const handleClickOutside = (event) => {
-  const dropdown = document.querySelector(`.tour-dropdown-${activeDropdown.value}`);
-
-  if (!dropdown || !dropdown.contains(event.target)) {
-    activeDropdown.value = null;
-    document.removeEventListener('click', handleClickOutside);
-  }
-};
-
 onMounted(async () => {
   await tourStore.fetchTours();
   for (const tour of tours.value) {
@@ -199,9 +137,5 @@ onMounted(async () => {
   setTimeout(() => {
     isLoading.value = false;
   }, 1000);
-});
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
 });
 </script>
