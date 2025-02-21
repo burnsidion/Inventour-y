@@ -1,4 +1,5 @@
 <template>
+  <!-- Toggle Dropdown  -->
   <div>
     <h3 class="text-[#393f4d] font-semibold text-center md:text-left">
       Closed Shows:
@@ -6,7 +7,7 @@
         {{ activeDropdown ? 'Close' : 'Open' }}
       </span>
     </h3>
-
+    <!-- Closed Shows List  -->
     <div
       v-if="activeDropdown"
       class="absolute md:absolute left-1/2 md:left-auto transform -translate-x-1/2 md:translate-x-0 mt-1 bg-ivory border border-gray-300 shadow-md rounded-md p-2 min-w-[18rem] max-w-[24rem] overflow-y-auto z-50"
@@ -16,6 +17,7 @@
         :key="show.show_id"
         class="flex items-center justify-between whitespace-nowrap px-2 py-1"
       >
+        <!-- Link to show spreadsheet -->
         <router-link
           :to="`/shows/${show.show_id}/summary`"
           class="text-blue-500 hover:underline block"
