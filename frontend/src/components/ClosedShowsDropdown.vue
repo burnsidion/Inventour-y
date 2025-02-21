@@ -3,7 +3,7 @@
     <h3 class="text-[#393f4d] font-semibold text-center md:text-left">
       Closed Shows:
       <span class="text-blue-500 cursor-pointer hover:underline" @click="toggleDropdown">
-        {{ activeDropdown ? 'Collapse' : 'Expand' }}
+        {{ activeDropdown ? 'Close' : 'Open' }}
       </span>
     </h3>
 

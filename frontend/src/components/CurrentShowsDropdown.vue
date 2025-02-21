@@ -3,7 +3,7 @@
     <h3 class="text-[#393f4d] font-semibold text-center md:text-left">
       Active Shows:
       <span class="text-blue-500 cursor-pointer hover:underline" @click="expandShows(tour.id)">
-        {{ activeDropdown === tour.id ? 'Collapse' : 'Expand' }}
+        {{ activeDropdown === tour.id ? 'Close' : 'Open' }}
       </span>
     </h3>
     <div
