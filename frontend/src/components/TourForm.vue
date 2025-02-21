@@ -19,6 +19,9 @@
             rules="required|min:3|max:50"
           />
           <ErrorMessage name="name" class="text-red-500 text-sm" />
+          <p v-if="duplicateError.length" class="text-red-500 text-sm">
+            {{ duplicateError }}
+          </p>
         </div>
 
         <!-- Band Name -->
@@ -93,7 +96,7 @@
 </template>
   
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { Field, ErrorMessage, defineRule } from 'vee-validate';
 import { required, min, max } from '@vee-validate/rules';
@@ -108,6 +111,7 @@ const tourStore = useTourStore();
 const router = useRouter();
 const route = useRoute();
 const loading = ref(false);
+const duplicateError = ref('');
 const tourId = route.params.id;
 
 const errorMessage = ref('');
@@ -123,7 +127,20 @@ const isEditing = computed(() => {
   return tourId !== undefined && tourStore.tours.some((tour) => tour.id === Number(tourId));
 });
 
+const isDuplicateTourName = computed(() => {
+  return tourStore.tours.some(
+    (existingTour) =>
+      existingTour.name.trim().toLowerCase() === tour.value.name.trim().toLowerCase() &&
+      existingTour.id !== Number(tourId)
+  );
+});
+
 const handleSubmit = async (tourData) => {
+  if (isDuplicateTourName.value) {
+    duplicateError.value = 'A tour with this name already exists!';
+    await nextTick();
+    return;
+  }
   if (isEditing.value) {
     await tourStore.updateTour(tourId, tourData);
   } else {

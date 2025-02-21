@@ -12,6 +12,7 @@
           :placeholder="inventoryItem.name"
         />
       </h2>
+      <p v-if="duplicateError" class="text-red-500 text-sm">{{ duplicateError }}</p>
 
       <form @submit.prevent="updateInventory">
         <div class="mb-4">
@@ -48,6 +49,9 @@
   
 <script setup>
 import { ref, watch } from 'vue';
+import { useInventoryStore } from '@/stores/inventory';
+
+const inventoryStore = useInventoryStore();
 
 const props = defineProps({
   inventoryItem: {
@@ -67,6 +71,7 @@ const updatedItem = ref({});
 const updatedPrice = ref('');
 const updatedSizes = ref([]);
 const addedQuantity = ref(0);
+const duplicateError = ref('');
 
 const sizeOrder = ['S', 'M', 'L', 'XL', 'XXL', 'One Size'];
 
@@ -98,7 +103,7 @@ watch(
   { immediate: true }
 );
 
-const updateInventory = () => {
+const updateInventory = async () => {
   if (!props.inventoryItem || !props.inventoryItem.id) {
     console.warn('🚨 Cannot update: item no longer exists in inventory.');
     return;
@@ -108,6 +113,7 @@ const updateInventory = () => {
     alert('🚨 Name and Price are required!');
     return;
   }
+
   const updatedData = {
     id: props.inventoryItem.id,
     name: newItemName.value.trim(),
@@ -126,6 +132,13 @@ const updateInventory = () => {
           }))
         : [],
   };
+
+  const result = await inventoryStore.updateInventoryItem(updatedData);
+
+  if (result?.error) {
+    duplicateError.value = result.error;
+    return;
+  }
 
   emit('save', updatedData);
 };

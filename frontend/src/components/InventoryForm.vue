@@ -4,6 +4,7 @@
 
     <form @submit.prevent="submitInventory">
       <label class="block mb-2 text-[#393f4d]">Item Name</label>
+      <p v-if="errorMessage" class="text-red-500 font-semibold mb-2">{{ errorMessage }}</p>
       <input v-model="name" type="text" class="input input-bordered w-full" required />
 
       <label class="block mt-4 mb-2 text-[#393f4d]">Type</label>
@@ -97,7 +98,20 @@ const filteredInventory = computed(() => {
   return inventoryStore.inventory.filter((item) => item.type !== 'bundle');
 });
 
+const errorMessage = ref('');
+
 const submitInventory = async () => {
+  errorMessage.value = '';
+
+  const isDuplicate = inventoryStore.inventory.some(
+    (item) => item.name.toLowerCase() === name.value.trim().toLowerCase()
+  );
+
+  if (isDuplicate) {
+    errorMessage.value = 'An item with this name already exists!';
+    return;
+  }
+
   const payload = {
     tour_id: route.query.tour_id,
     name: name.value.trim(),

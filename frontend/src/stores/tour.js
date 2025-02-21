@@ -47,9 +47,7 @@ export const useTourStore = defineStore('tour', () => {
       const token = authStore.token;
 
       const formattedTourData = {
-        ...tourData.value,
-        start_date: tourData.value.start_date || null,
-        end_date: tourData.value.end_date || null,
+        ...tourData,
       };
 
       const response = await axios.put(
@@ -134,7 +132,7 @@ export const useTourStore = defineStore('tour', () => {
       const response = await axios.get(`http://localhost:5002/api/shows?tour_id=${tourId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-  
+
       return response.data;
     } catch (error) {
       if (error.response?.status === 404) {
