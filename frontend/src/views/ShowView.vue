@@ -334,6 +334,10 @@ const clearAll = () => {
 };
 
 const closeOutShow = async () => {
+  const confirmed = confirm(
+    "Closing this show will finalize sales and prevent any more transactions for the show. Are you sure you'd like to proceed?"
+  );
+  if (!confirmed) return;
   try {
     await showSummaryStore.closeShow(showId);
     router.push(`/shows/${showId}/summary`);

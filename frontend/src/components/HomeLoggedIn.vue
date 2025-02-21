@@ -51,10 +51,10 @@
                 </p>
               </div>
             </div>
-            <!-- Shows List -->
+
             <div
               v-if="tour.shows && tour.shows.length > 0"
-              class="mt-2"
+              class="mt-2 flex justify-between"
               :class="{ 'open-dropdown': activeDropdown === tour.id }"
             >
               <h3 class="text-[#393f4d] font-semibold text-center md:text-left">
@@ -92,7 +92,9 @@
                   </button>
                 </div>
               </div>
+              <ClosedShowsDropdown />
             </div>
+
             <p v-else class="text-gray-500 text-center md:text-left">No shows added yet.</p>
 
             <!-- Buttons -->
@@ -128,6 +130,7 @@ import draggable from 'vuedraggable';
 
 import SidebarMenu from '@/components/SidebarMenu.vue';
 import TourCardSkeleton from './TourCardSkeleton.vue';
+import ClosedShowsDropdown from './ClosedShowsDropdown.vue';
 
 const router = useRouter();
 const tourStore = useTourStore();
