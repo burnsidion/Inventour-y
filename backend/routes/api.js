@@ -283,27 +283,36 @@ router.put("/tours/:id", authenticateToken, async (req, res) => {
 });
 
 router.delete("/tours/:id", authenticateToken, async (req, res) => {
-  const tourId = req.params.id;
-  const userId = req.user.id;
-
+  const client = await pool.connect();
   try {
-    const tourCheck = await pool.query(
-      "SELECT * FROM tours WHERE id = $1 AND user_id = $2",
-      [tourId, userId]
+    await client.query("BEGIN");
+
+    const tourId = req.params.id;
+
+    await client.query(
+      `DELETE FROM show_summaries WHERE show_id IN (SELECT id FROM shows WHERE tour_id = $1)`,
+      [tourId]
     );
 
-    if (tourCheck.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "Tour not found or unauthorized" });
-    }
+    await client.query(
+      `DELETE FROM sales WHERE show_id IN (SELECT id FROM shows WHERE tour_id = $1)`,
+      [tourId]
+    );
 
-    await pool.query("DELETE FROM tours WHERE id = $1", [tourId]);
+    await client.query(`DELETE FROM shows WHERE tour_id = $1`, [tourId]);
 
+    await client.query(`DELETE FROM inventory WHERE tour_id = $1`, [tourId]);
+
+    await client.query(`DELETE FROM tours WHERE id = $1`, [tourId]);
+
+    await client.query("COMMIT");
     res.status(200).json({ message: "Tour deleted successfully" });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Error deleting tour:", error);
-    res.status(500).json({ message: "Failed to delete tour" });
+    res.status(500).json({ error: "Failed to delete tour" });
+  } finally {
+    client.release();
   }
 });
 
@@ -664,44 +673,42 @@ router.delete("/inventory/:id", authenticateToken, async (req, res) => {
   try {
     await pool.query("BEGIN");
 
-    const itemResult = await pool.query(
-      "SELECT type FROM inventory WHERE id = $1 FOR UPDATE",
+    // Check if the item is part of any bundle
+    const bundleCheck = await pool.query(
+      "SELECT bundle_id FROM bundle_items WHERE item_id = $1",
       [id]
     );
 
-    if (itemResult.rows.length === 0) {
-      await pool.query("ROLLBACK");
-      return res.status(404).json({ error: "Item not found" });
-    }
+    if (bundleCheck.rows.length > 0) {
+      const bundleIds = bundleCheck.rows.map((row) => row.bundle_id);
 
-    const itemType = itemResult.rows[0].type;
-
-    if (itemType === "soft") {
-      await pool.query("DELETE FROM inventory_sizes WHERE inventory_id = $1", [
-        id,
+      // Delete bundles that contain the inventory item
+      await pool.query("DELETE FROM bundle_items WHERE bundle_id = ANY($1)", [
+        bundleIds,
       ]);
+      await pool.query(
+        "DELETE FROM inventory WHERE id = ANY($1) AND type = 'bundle'",
+        [bundleIds]
+      );
+
+      console.log(
+        `🗑️ Deleted ${bundleIds.length} bundles containing inventory item ${id}`
+      );
     }
 
-    const deleteResult = await pool.query(
-      "DELETE FROM inventory WHERE id = $1 RETURNING *",
-      [id]
-    );
-
-    if (deleteResult.rows.length === 0) {
-      await pool.query("ROLLBACK");
-      return res.status(404).json({ error: "Failed to delete item" });
-    }
+    // Now delete the actual inventory item
+    await pool.query("DELETE FROM inventory WHERE id = $1 RETURNING *", [id]);
 
     await pool.query("COMMIT");
 
     res.status(200).json({
-      message: "Item deleted successfully",
-      deletedItem: deleteResult.rows[0],
+      message:
+        "Inventory item deleted successfully, along with associated bundles.",
     });
   } catch (error) {
     await pool.query("ROLLBACK");
-    console.error("❌ Error deleting item:", error);
-    res.status(500).json({ error: "Failed to delete item" });
+    console.error("❌ Error deleting inventory item:", error);
+    res.status(500).json({ error: "Failed to delete inventory item." });
   }
 });
 
@@ -1030,6 +1037,91 @@ router.get(
     }
   }
 );
+
+router.post("/inventory/bundles", authenticateToken, async (req, res) => {
+  const { name, price, items } = req.body;
+  const { tour_id } = req.query;
+
+  if (
+    !name ||
+    !price ||
+    !tour_id ||
+    !Array.isArray(items) ||
+    items.length === 0
+  ) {
+    return res
+      .status(400)
+      .json({ error: "Missing required fields or invalid items array" });
+  }
+
+  try {
+    await pool.query("BEGIN");
+
+    const bundleResult = await pool.query(
+      `INSERT INTO inventory (name, type, price, tour_id, quantity) 
+       VALUES ($1, 'bundle', $2, $3, 0) RETURNING id`,
+      [name, price, tour_id]
+    );
+
+    if (!bundleResult.rows.length) {
+      throw new Error("Failed to insert bundle into inventory");
+    }
+
+    const bundleId = bundleResult.rows[0].id;
+
+    let bundleQuantities = [];
+
+    for (const { item_id } of items) {
+      const itemQuery = await pool.query(
+        `SELECT type FROM inventory WHERE id = $1`,
+        [item_id]
+      );
+
+      if (!itemQuery.rows.length) continue;
+
+      const itemType = itemQuery.rows[0].type;
+      let itemQuantity = 0;
+
+      if (itemType === "hard") {
+        const hardItem = await pool.query(
+          `SELECT quantity FROM inventory WHERE id = $1`,
+          [item_id]
+        );
+        itemQuantity = hardItem.rows.length ? hardItem.rows[0].quantity : 0;
+      } else if (itemType === "soft") {
+        const softItemSizes = await pool.query(
+          `SELECT MIN(quantity) AS min_quantity FROM inventory_sizes WHERE inventory_id = $1`,
+          [item_id]
+        );
+        itemQuantity = softItemSizes.rows[0]?.min_quantity || 0;
+      }
+
+      bundleQuantities.push(itemQuantity);
+
+      await pool.query(
+        `INSERT INTO bundle_items (bundle_id, item_id, quantity) VALUES ($1, $2, $3)`,
+        [bundleId, item_id, itemQuantity]
+      );
+    }
+
+    const bundleQuantity =
+      bundleQuantities.length > 0 ? Math.min(...bundleQuantities) : 0;
+
+    await pool.query(`UPDATE inventory SET quantity = $1 WHERE id = $2`, [
+      bundleQuantity,
+      bundleId,
+    ]);
+
+    await pool.query("COMMIT");
+    res
+      .status(201)
+      .json({ message: "Bundle created", bundleId, quantity: bundleQuantity });
+  } catch (error) {
+    await pool.query("ROLLBACK");
+    console.error("Error creating bundle:", error);
+    res.status(500).json({ error: "Failed to create bundle" });
+  }
+});
 
 //Show Summary routes
 router.post("/shows/:show_id/close", authenticateToken, async (req, res) => {

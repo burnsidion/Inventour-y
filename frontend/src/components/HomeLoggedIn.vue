@@ -68,16 +68,10 @@
             </div>
 
             <!-- Dropdowns -->
-            <div
-              v-if="tour.shows && tour.shows.length > 0"
-              class="mt-2 flex flex-col md:flex-row justify-around"
-            >
+            <div class="mt-2 flex flex-col md:flex-row justify-around">
               <CurrentShows :tour="tour" />
               <ClosedShowsDropdown />
             </div>
-
-            <!-- No Shows Placeholder -->
-            <p v-else class="text-gray-500 text-center md:text-left">No shows added yet.</p>
 
             <!-- Buttons -->
             <div class="flex flex-col md:flex-row gap-2 mt-4">
