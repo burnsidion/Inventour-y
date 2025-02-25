@@ -16,6 +16,7 @@
     "daisyui": "^4.12.23",
     "date-fns": "^4.1.0",
     "pinia": "^2.3.1",
+    "print-js": "^1.6.0",
     "vee-validate": "^4.15.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
