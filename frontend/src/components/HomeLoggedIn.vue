@@ -18,8 +18,10 @@
     />
 
     <div class="flex-1 p-4 md:p-6">
-      <h1 class="text-3xl font-bold mb-6 text-center">Your Tours</h1>
-
+      <h1 v-if="!isUserLoading" class="text-3xl font-bold mb-6 text-center mt-12 md:mt-0">
+        {{ `Welcome ${userName}` }}
+      </h1>
+      <h1 class="text-3xl font-bold mb-6 text-center">Behold Your Home Page!</h1>
       <!-- Create Tour Button -->
       <div class="flex justify-center my-6">
         <button @click="createTour" class="btn btn-primary w-full sm:w-auto">
@@ -96,12 +98,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { format } from 'date-fns';
 import { useRouter } from 'vue-router';
 import { useTourStore } from '@/stores/tour';
 import { useSalesStore } from '@/stores/salesStore';
+import { useAuthStore } from '@/stores/auth';
 import draggable from 'vuedraggable';
 
 import SidebarMenu from '@/components/SidebarMenu.vue';
@@ -112,10 +115,17 @@ import CurrentShows from './CurrentShowsDropdown.vue';
 const router = useRouter();
 const tourStore = useTourStore();
 const salesStore = useSalesStore();
+const authStore = useAuthStore();
 const isLoading = ref(true);
 const menuOpen = ref(false);
+const isUserLoading = ref(true);
 
 const { tours } = storeToRefs(tourStore);
+
+const userName = computed(() => {
+  if (isUserLoading.value) return '';
+  return authStore.user?.name || 'Guest';
+});
 
 const saveTourOrder = () => {
   console.log('New tour order:', tours.value);
@@ -138,8 +148,11 @@ const createTour = () => {
 
 onMounted(async () => {
   await tourStore.fetchTours();
+  await authStore.fetchUserData();
+  console.log(authStore.user.name);
   for (const tour of tours.value) {
     await salesStore.fetchTourTotalSales(tour.id);
+    isUserLoading.value = false;
   }
 
   setTimeout(() => {

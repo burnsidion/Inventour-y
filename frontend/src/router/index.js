@@ -10,6 +10,7 @@ import InventoryForm from '@/components/InventoryForm.vue';
 import ProfileView from '@/views/ProfileView.vue';
 import ShowSummaryView from '@/views/ShowSummaryView.vue';
 import ClosedShowsView from '@/views/ClosedShowsView.vue';
+import MapView from '@/views/MapView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -76,6 +77,11 @@ const router = createRouter({
       path: '/shows/:id/summary',
       name: 'ShowSummaryView',
       component: ShowSummaryView,
+    },
+    {
+      path: '/tours/mapview',
+      name: 'MapView',
+      component: MapView,
     },
   ],
 });

@@ -9,14 +9,21 @@
     <h2 class="text-lg font-bold mb-6">Menu</h2>
 
     <nav class="space-y-2">
-      <RouterLink to="/profile" class="block p-2 rounded hover:bg-gray-200">
+      <RouterLink
+        to="/profile"
+        class="block px-4 py-2 rounded hover:bg-gray-200 hover:text-[#393f4d]"
+      >
         👤 Profile
       </RouterLink>
-      <RouterLink to="/shows/closed" class="block px-4 py-2 hover:bg-gray-200 rounded"
+      <RouterLink
+        to="/shows/closed"
+        class="block px-4 py-2 rounded hover:bg-gray-200 hover:text-[#393f4d]"
         >📊 Closed Shows</RouterLink
       >
-      <RouterLink to="/map" class="block px-4 py-2 hover:bg-gray-200 rounded"
-        >🗺️ Map Views (WIP)</RouterLink
+      <RouterLink
+        to="/tours/mapview"
+        class="block px-4 py-2 rounded hover:bg-gray-200 hover:text-[#393f4d]"
+        >🗺️ Map Views</RouterLink
       >
       <LogoutButton class="block px-4 py-2 hover:bg-red-500 rounded">🚪 Logout</LogoutButton>
     </nav>
