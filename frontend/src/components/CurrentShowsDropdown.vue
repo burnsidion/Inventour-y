@@ -11,9 +11,9 @@
       v-if="activeDropdown === tour.id"
       :class="`tour-dropdown-${tour.id}`"
       class="absolute md:absolute left-1/2 md:left-auto transform -translate-x-1/2 md:translate-x-0 mt-1 bg-ivory border border-gray-300 shadow-md rounded-md p-2 min-w-[18rem] max-w-[24rem] overflow-y-auto z-50"
-      :style="{ maxHeight: getMaxHeight }"
     >
       <!-- Active Shows List  -->
+      <p v-if="tour.shows.length === 0">No Active Shows</p>
       <div
         v-for="show in tour.shows"
         :key="show.id"
@@ -37,18 +37,13 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps } from 'vue';
+import { ref, defineProps } from 'vue';
 import { format } from 'date-fns';
 import { useTourStore } from '@/stores/tour';
 
 const tourStore = useTourStore();
 const props = defineProps({ tour: Object });
 const activeDropdown = ref(null);
-
-const getMaxHeight = computed(() => {
-  if (!props.tour || !props.tour.shows) return '0';
-  return props.tour.shows.length > 5 ? '12rem' : `${props.tour.shows.length * 3}rem`;
-});
 
 const handleClickOutside = (event) => {
   const dropdown = document.querySelector(`.tour-dropdown-${activeDropdown.value}`);

@@ -90,18 +90,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   const updateInventoryItem = async (updatedItem) => {
     if (!updatedItem || !updatedItem.id) {
       console.warn('🚨 Invalid update request, missing item ID');
-      return { error: 'Invalid update request: missing item ID' };
-    }
-
-    const existingItem = inventory.value.find(
-      (item) =>
-        item.name.toLowerCase().trim() === updatedItem.name.toLowerCase().trim() &&
-        item.id !== updatedItem.id,
-    );
-
-    if (existingItem) {
-      console.warn(`🚨 Duplicate inventory item detected: ${updatedItem.name}`);
-      return { error: 'An item with this name already exists in the inventory.' };
+      return false;
     }
 
     try {
@@ -122,10 +111,10 @@ export const useInventoryStore = defineStore('inventory', () => {
         };
       }
 
-      return response.data;
+      return true;
     } catch (error) {
       console.error('❌ ERROR UPDATING INVENTORY:', error.response?.data || error);
-      return { error: 'Failed to update inventory item.' };
+      return false;
     }
   };
 
@@ -157,6 +146,8 @@ export const useInventoryStore = defineStore('inventory', () => {
       console.warn('Skipping saveInventoryChanges: No valid updatedData');
       return false;
     }
+
+    await fetchInventory(tourId);
 
     const existingItem = inventory.value.find((item) => item.id === updatedData.id);
     if (!existingItem) {

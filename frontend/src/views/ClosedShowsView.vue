@@ -35,8 +35,10 @@
 </template>
   
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { storeToRefs } from 'pinia';
+import { useRoute } from 'vue-router';
+
 import { useShowSummariesStore } from '@/stores/showSummariesStore';
 import ShowSummaryCard from '@/components/ShowSummaryCard.vue';
 
@@ -45,8 +47,10 @@ const isLoading = ref(true);
 const expandedShows = ref({});
 const { closedShows } = storeToRefs(showSummariesStore);
 
-onMounted(async () => {
-  await showSummariesStore.fetchClosedShows();
+const route = useRoute();
+
+onMounted(() => {
+  showSummariesStore.fetchClosedShows();
   isLoading.value = false;
 });
 
@@ -66,4 +70,12 @@ const toggleShow = (showId) => {
 };
 
 const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
+
+watch(
+  () => route.fullPath,
+  async () => {
+    await nextTick();
+    await showSummariesStore.fetchClosedShows();
+  }
+);
 </script>

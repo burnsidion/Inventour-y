@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from './auth';
+import { useShowSummariesStore } from './showSummariesStore';
 import { useRouter } from 'vue-router';
 
 export const useTourStore = defineStore('tour', () => {
   const authStore = useAuthStore();
+  const showSummariesStore = useShowSummariesStore();
   const router = useRouter();
 
   const tourName = ref('');
@@ -70,7 +72,12 @@ export const useTourStore = defineStore('tour', () => {
   };
 
   const deleteTour = async (tourId) => {
-    if (!confirm('Are you sure you want to delete this tour?')) return;
+    if (
+      !confirm(
+        'WARNING!! Deleting this tour will also delete all shows, transaction sales data and show spreadsheets for this tour, are you sure you want to proceed?',
+      )
+    )
+      return;
 
     try {
       const token = authStore.token;
@@ -80,7 +87,14 @@ export const useTourStore = defineStore('tour', () => {
         },
       });
 
+      showSummariesStore.closedShows.splice(0);
+
+      await nextTick();
+
+      await showSummariesStore.fetchClosedShows();
+
       tours.value = tours.value.filter((tour) => tour.id !== tourId);
+
       router.push('/');
     } catch (error) {
       console.error('Error deleting tour:', error.response?.data || error.message);

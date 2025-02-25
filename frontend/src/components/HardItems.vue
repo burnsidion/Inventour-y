@@ -157,7 +157,9 @@ const handleItemDeleted = () => {
 };
 
 const deleteItem = async (itemId) => {
-  const confirmed = confirm('🚨 Are you sure you want to delete this item?');
+  const confirmed = confirm(
+    '🚨 Deleting this item will also delete any existing bundles that conatin this item, are you sure you want to proceed?'
+  );
   if (!confirmed) return;
 
   const success = await inventoryStore.deleteInventoryItem(itemId);
