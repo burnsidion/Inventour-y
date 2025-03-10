@@ -4,45 +4,24 @@
     <div class="w-full max-w-3xl bg-white rounded-lg shadow-lg p-6 text-center">
       <div class="flex flex-col items-center">
         <!-- Profile Picture -->
-        <img
-          :src="previewImage"
-          alt="Profile"
-          class="w-24 h-24 rounded-full object-cover border-4 border-gray-300"
-        />
+        <img :src="previewImage" alt="Profile" class="w-24 h-24 rounded-full object-cover border-4 border-gray-300" />
 
         <!-- Upload Button -->
-        <input
-          type="file"
-          @change="handleFileUpload"
-          accept="image/*"
-          class="mt-2 hidden"
-          ref="fileInput"
-        />
+        <input type="file" @change="handleFileUpload" accept="image/*" class="mt-2 hidden" ref="fileInput" />
         <button @click="fileInput.click()" class="text-blue-500 mt-2">📸 Upload Photo</button>
 
         <!-- Save & Cancel Buttons -->
-        <button
-          v-if="editing.profilePic"
-          @click="saveEdit('profilePic')"
-          class="text-green-500 mt-2"
-        >
+        <button v-if="editing.profilePic" @click="saveEdit('profilePic')" class="text-green-500 mt-2">
           ✅ Save
         </button>
-        <button
-          v-if="editing.profilePic"
-          @click="cancelEdit('profilePic')"
-          class="text-red-500 mt-2"
-        >
+        <button v-if="editing.profilePic" @click="cancelEdit('profilePic')" class="text-red-500 mt-2">
           ❌ Cancel
         </button>
 
         <!-- Username -->
         <div class="mt-4 flex items-center gap-2">
-          <input
-            v-if="editing.username"
-            v-model="userName"
-            class="border border-gray-300 rounded px-3 py-1 text-center"
-          />
+          <input v-if="editing.username" v-model="userName"
+            class="border border-gray-300 rounded px-3 py-1 text-center" />
           <h1 v-else class="text-2xl font-semibold text-[#393f4d]">{{ userName }}</h1>
 
           <button v-if="!editing.username" @click="toggleEdit('username')" class="text-blue-500">
@@ -66,11 +45,8 @@
           <h2 class="text-xl font-semibold text-gray-700">About Me</h2>
           <button @click="toggleEdit('bio')" class="text-blue-500">✏ Edit</button>
         </div>
-        <textarea
-          v-if="editing.bio"
-          v-model="bio"
-          class="w-full mt-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        ></textarea>
+        <textarea v-if="editing.bio" v-model="bio"
+          class="w-full mt-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
         <p v-else class="mt-2 text-gray-600">{{ bio || 'No bio available' }}</p>
         <div class="flex gap-2">
           <button v-if="editing.bio" @click="saveEdit('bio')" class="btn-primary mt-3">
@@ -98,11 +74,8 @@
             <button @click="addBand" class="btn-primary">+</button>
           </div>
           <ul class="mt-3 space-y-2">
-            <li
-              v-for="(band, index) in bands"
-              :key="index"
-              class="flex justify-between items-center p-2 bg-gray-200 rounded-lg"
-            >
+            <li v-for="(band, index) in bands" :key="index"
+              class="flex justify-between items-center p-2 bg-gray-200 rounded-lg">
               <span>{{ band }}</span>
             </li>
           </ul>
@@ -127,11 +100,8 @@
             <button @click="addTour" class="btn-primary">+</button>
           </div>
           <ul class="mt-3 space-y-2">
-            <li
-              v-for="(tour, index) in pastTours"
-              :key="index"
-              class="flex justify-between items-center p-2 bg-gray-200 rounded-lg"
-            >
+            <li v-for="(tour, index) in pastTours" :key="index"
+              class="flex justify-between items-center p-2 bg-gray-200 rounded-lg">
               <span>{{ tour }}</span>
               <button @click="removeTour(index)" class="text-red-500 hover:text-red-700">✖</button>
             </li>
@@ -140,10 +110,15 @@
           <button @click="cancelEdit('tours')" class="text-red-500 mt-3">❌ Cancel</button>
         </div>
       </div>
+
+      <!-- Delete Account Button -->
+      <button @click="confirmDeleteAccount" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-6 hover:bg-red-700">
+        🗑️ Delete Account
+      </button>
     </div>
   </div>
 </template>
-  
+
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
@@ -239,6 +214,13 @@ const getProfilePicUrl = (path) => {
   return path && path.startsWith('/uploads')
     ? `http://localhost:5002${path}`
     : 'http://localhost:5002/uploads/dummy-profile-pic-1.jpg';
+};
+
+const confirmDeleteAccount = async () => {
+  const confirmed = confirm("⚠️ This action is irreversible! Deleting your account will remove all your data, including tours and shows. Are you sure?");
+  if (confirmed) {
+    await authStore.deleteUserAccount();
+  }
 };
 
 onMounted(async () => {

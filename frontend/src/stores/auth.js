@@ -133,6 +133,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  const deleteUserAccount = async () => {
+    try {
+      await axios.delete(`http://localhost:5002/api/users/${user.value.id}`, {
+        headers: { Authorization: `Bearer ${token.value}` },
+      });
+
+      alert("Your account has been deleted successfully.");
+      logout();
+    } catch (error) {
+      console.error("Error deleting account:", error.response?.data || error.message);
+      alert("Failed to delete account. Please try again.");
+    }
+  };
+
   const updateUsername = async (newUsername) => {
     try {
       await axios.put(
@@ -202,5 +216,6 @@ export const useAuthStore = defineStore('auth', () => {
     updateUsername,
     updateBio,
     saveProfilePic,
+    deleteUserAccount
   };
 });
