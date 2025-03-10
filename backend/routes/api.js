@@ -121,9 +121,9 @@ router.put(
       }
 
       const result = await pool.query(
-        `UPDATE users 
-         SET name = COALESCE($1, name), 
-             email = COALESCE($2, email), 
+        `UPDATE users
+         SET name = COALESCE($1, name),
+             email = COALESCE($2, email),
              password = COALESCE($3, password),
              bio = COALESCE($4, bio),
              profile_pic = COALESCE($5, profile_pic, '/uploads/dummy-profile-pic-1.jpg')
@@ -157,6 +157,63 @@ router.delete(
     }
   }
 );
+
+router.delete("/users/:id", authenticateToken, async (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+
+  if (isNaN(userId)) {
+    return res.status(400).json({ error: "Invalid user ID" });
+  }
+
+  if (userId !== req.user.id) {
+    return res.status(403).json({ error: "Unauthorized: You can only delete your own account" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Get all tours for this user
+    const tours = await client.query("SELECT id FROM tours WHERE user_id = $1", [userId]);
+    const tourIds = tours.rows.map((row) => row.id);
+
+    if (tourIds.length > 0) {
+      // Get all shows linked to the user's tours
+      const shows = await client.query("SELECT id FROM shows WHERE tour_id = ANY($1)", [tourIds]);
+      const showIds = shows.rows.map((row) => row.id);
+
+      if (showIds.length > 0) {
+        // Delete all related sales
+        await client.query("DELETE FROM sales WHERE show_id = ANY($1)", [showIds]);
+
+        // Delete all show summaries
+        await client.query("DELETE FROM show_summaries WHERE show_id = ANY($1)", [showIds]);
+
+        // Delete all shows
+        await client.query("DELETE FROM shows WHERE id = ANY($1)", [showIds]);
+      }
+
+      // Delete all inventory related to user's tours
+      await client.query("DELETE FROM inventory WHERE tour_id = ANY($1)", [tourIds]);
+
+      // Delete all tours
+      await client.query("DELETE FROM tours WHERE id = ANY($1)", [tourIds]);
+    }
+
+    // Finally, delete the user
+    await client.query("DELETE FROM users WHERE id = $1", [userId]);
+
+    await client.query("COMMIT");
+    res.status(200).json({ message: "User and all related data deleted successfully" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: "Failed to delete user" });
+  } finally {
+    client.release();
+  }
+});
 
 router.post("/users/login", async (req, res) => {
   const { email, password } = req.body;
@@ -263,12 +320,12 @@ router.put("/tours/:id", authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      `UPDATE tours 
-       SET name = COALESCE($1, name), 
-           start_date = COALESCE($2, start_date), 
-           end_date = COALESCE($3, end_date), 
+      `UPDATE tours
+       SET name = COALESCE($1, name),
+           start_date = COALESCE($2, start_date),
+           end_date = COALESCE($3, end_date),
            band_name = COALESCE($4, band_name)
-       WHERE id = $5 
+       WHERE id = $5
        RETURNING *`,
       [name, start_date, end_date, band_name, id]
     );
@@ -346,10 +403,10 @@ router.get("/shows", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `
-      SELECT 
-        s.id, 
-        s.venue, 
-        s.date 
+      SELECT
+        s.id,
+        s.venue,
+        s.date
       FROM shows s
       LEFT JOIN show_summaries ss ON s.id = ss.show_id
       JOIN tours t ON s.tour_id = t.id
@@ -376,14 +433,14 @@ router.get("/shows/closed", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `
-      SELECT 
-        s.id AS show_id, 
-        s.venue, 
-        s.date, 
-        t.id AS tour_id, 
-        t.name AS tour_name, 
-        t.band_name, 
-        ss.total_sales, 
+      SELECT
+        s.id AS show_id,
+        s.venue,
+        s.date,
+        t.id AS tour_id,
+        t.name AS tour_name,
+        t.band_name,
+        ss.total_sales,
         ss.total_transactions
       FROM show_summaries ss
       JOIN shows s ON ss.show_id = s.id
@@ -512,13 +569,13 @@ router.get("/inventory", authenticateToken, async (req, res) => {
 
     // Fetch all inventory items
     const inventoryResult = await pool.query(
-      `SELECT 
-              id, 
-              name, 
-              type, 
-              price, 
-              image_url, 
-              created_at, 
+      `SELECT
+              id,
+              name,
+              type,
+              price,
+              image_url,
+              created_at,
               tour_id,
               quantity
        FROM inventory
@@ -542,10 +599,10 @@ router.get("/inventory", authenticateToken, async (req, res) => {
           // Fetch items in the bundle
           const bundleItemsResult = await pool.query(
             `SELECT i.id, i.name, i.type, i.price, i.image_url, bi.quantity,
-                    CASE 
-                        WHEN i.type = 'soft' THEN 
-                            (SELECT json_agg(json_build_object('size', s.size, 'quantity', s.quantity)) 
-                            FROM inventory_sizes s 
+                    CASE
+                        WHEN i.type = 'soft' THEN
+                            (SELECT json_agg(json_build_object('size', s.size, 'quantity', s.quantity))
+                            FROM inventory_sizes s
                             WHERE s.inventory_id = i.id)
                         ELSE NULL
                     END AS sizes
@@ -580,9 +637,9 @@ router.post("/inventory/update", authenticateToken, async (req, res) => {
 
   try {
     const result = await pool.query(
-      `UPDATE inventory 
-     SET price = $1, quantity = $2 
-     WHERE id = $3 
+      `UPDATE inventory
+     SET price = $1, quantity = $2
+     WHERE id = $3
      RETURNING *`,
       [new_price, new_quantity, inventory_id]
     );
@@ -900,17 +957,17 @@ router.get("/sales", authenticateToken, async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT 
-        sales.id, 
-        sales.quantity_sold, 
-        sales.total_amount, 
-        sales.payment_method, 
+      `SELECT
+        sales.id,
+        sales.quantity_sold,
+        sales.total_amount,
+        sales.payment_method,
         sales.created_at,
-        inventory.name AS item_name, 
-        inventory.type, 
+        inventory.name AS item_name,
+        inventory.type,
         inventory.price,
-        CASE 
-            WHEN inventory.type = 'soft' 
+        CASE
+            WHEN inventory.type = 'soft'
             THEN json_agg(json_build_object('size', inventory_sizes.size, 'quantity', inventory_sizes.quantity))
             ELSE NULL
         END AS sizes
@@ -976,14 +1033,14 @@ router.post("/sales/bundle", authenticateToken, async (req, res) => {
 
     for (const { item_id, quantity } of bundleItems.rows) {
       await pool.query(
-        `UPDATE inventory SET quantity = quantity - ($1 * $2) 
+        `UPDATE inventory SET quantity = quantity - ($1 * $2)
          WHERE id = $3 AND quantity >= ($1 * $2)`,
         [quantity_sold, quantity, item_id]
       );
     }
 
     await pool.query(
-      `INSERT INTO sales (inventory_id, quantity_sold, total_amount, payment_method, show_id) 
+      `INSERT INTO sales (inventory_id, quantity_sold, total_amount, payment_method, show_id)
        VALUES ($1, $2, (SELECT price FROM inventory WHERE id = $1) * $2, 'cash', $3)`,
       [bundle_id, quantity_sold, show_id]
     );
@@ -1017,10 +1074,10 @@ router.get(
 
       const itemsResult = await pool.query(
         `SELECT i.id, i.name, i.type, i.price, i.image_url, bi.quantity,
-              CASE 
-                  WHEN i.type = 'soft' THEN 
-                      (SELECT json_agg(json_build_object('size', s.size, 'quantity', s.quantity)) 
-                       FROM inventory_sizes s 
+              CASE
+                  WHEN i.type = 'soft' THEN
+                      (SELECT json_agg(json_build_object('size', s.size, 'quantity', s.quantity))
+                       FROM inventory_sizes s
                        WHERE s.inventory_id = i.id)
                   ELSE NULL
               END AS sizes
@@ -1058,7 +1115,7 @@ router.post("/inventory/bundles", authenticateToken, async (req, res) => {
     await pool.query("BEGIN");
 
     const bundleResult = await pool.query(
-      `INSERT INTO inventory (name, type, price, tour_id, quantity) 
+      `INSERT INTO inventory (name, type, price, tour_id, quantity)
        VALUES ($1, 'bundle', $2, $3, 0) RETURNING id`,
       [name, price, tour_id]
     );
