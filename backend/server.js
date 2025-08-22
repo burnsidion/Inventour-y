@@ -16,6 +16,7 @@ import usersRouter from "./routes/users.js";
 import showsRouter from "./routes/shows.js";
 import toursRouter from "./routes/tours.js";
 import inventoryRouter from "./routes/inventory.js";
+import salesRouter from "./routes/sales.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +30,7 @@ app.use("/api/users", usersRouter);
 app.use("/api/shows", showsRouter);
 app.use("/api/tours", toursRouter);
 app.use("/api/inventory", inventoryRouter);
+app.use("/api/sales", salesRouter);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
