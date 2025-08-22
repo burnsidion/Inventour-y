@@ -262,4 +262,125 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 	}
 });
 
+//Bundle routes
+router.get("/bundles/:bundle_id", authenticateToken, async (req, res) => {
+	const { bundle_id } = req.params;
+
+	try {
+		const bundleResult = await pool.query(
+			`SELECT * FROM inventory WHERE id = $1 AND type = 'bundle'`,
+			[bundle_id]
+		);
+
+		if (bundleResult.rows.length === 0) {
+			return res.status(404).json({ error: "Bundle not found" });
+		}
+
+		const itemsResult = await pool.query(
+			`SELECT i.id, i.name, i.type, i.price, i.image_url, bi.quantity,
+              CASE
+                  WHEN i.type = 'soft' THEN
+                      (SELECT json_agg(json_build_object('size', s.size, 'quantity', s.quantity))
+                       FROM inventory_sizes s
+                       WHERE s.inventory_id = i.id)
+                  ELSE NULL
+              END AS sizes
+       FROM bundle_items bi
+       JOIN inventory i ON bi.item_id = i.id
+       WHERE bi.bundle_id = $1`,
+			[bundle_id]
+		);
+
+		res.json({ bundle: bundleResult.rows[0], items: itemsResult.rows });
+	} catch (error) {
+		console.error("Error fetching bundle:", error);
+		res.status(500).json({ error: "Failed to fetch bundle" });
+	}
+});
+
+router.post("/bundles", authenticateToken, async (req, res) => {
+	const { name, price, items } = req.body;
+	const { tour_id } = req.query;
+
+	if (
+		!name ||
+		!price ||
+		!tour_id ||
+		!Array.isArray(items) ||
+		items.length === 0
+	) {
+		return res
+			.status(400)
+			.json({ error: "Missing required fields or invalid items array" });
+	}
+
+	try {
+		await pool.query("BEGIN");
+
+		const bundleResult = await pool.query(
+			`INSERT INTO inventory (name, type, price, tour_id, quantity)
+       VALUES ($1, 'bundle', $2, $3, 0) RETURNING id`,
+			[name, price, tour_id]
+		);
+
+		if (!bundleResult.rows.length) {
+			throw new Error("Failed to insert bundle into inventory");
+		}
+
+		const bundleId = bundleResult.rows[0].id;
+
+		let bundleQuantities = [];
+
+		for (const { item_id } of items) {
+			const itemQuery = await pool.query(
+				`SELECT type FROM inventory WHERE id = $1`,
+				[item_id]
+			);
+
+			if (!itemQuery.rows.length) continue;
+
+			const itemType = itemQuery.rows[0].type;
+			let itemQuantity = 0;
+
+			if (itemType === "hard") {
+				const hardItem = await pool.query(
+					`SELECT quantity FROM inventory WHERE id = $1`,
+					[item_id]
+				);
+				itemQuantity = hardItem.rows.length ? hardItem.rows[0].quantity : 0;
+			} else if (itemType === "soft") {
+				const softItemSizes = await pool.query(
+					`SELECT MIN(quantity) AS min_quantity FROM inventory_sizes WHERE inventory_id = $1`,
+					[item_id]
+				);
+				itemQuantity = softItemSizes.rows[0]?.min_quantity || 0;
+			}
+
+			bundleQuantities.push(itemQuantity);
+
+			await pool.query(
+				`INSERT INTO bundle_items (bundle_id, item_id, quantity) VALUES ($1, $2, $3)`,
+				[bundleId, item_id, itemQuantity]
+			);
+		}
+
+		const bundleQuantity =
+			bundleQuantities.length > 0 ? Math.min(...bundleQuantities) : 0;
+
+		await pool.query(`UPDATE inventory SET quantity = $1 WHERE id = $2`, [
+			bundleQuantity,
+			bundleId,
+		]);
+
+		await pool.query("COMMIT");
+		res
+			.status(201)
+			.json({ message: "Bundle created", bundleId, quantity: bundleQuantity });
+	} catch (error) {
+		await pool.query("ROLLBACK");
+		console.error("Error creating bundle:", error);
+		res.status(500).json({ error: "Failed to create bundle" });
+	}
+});
+
 export default router;
