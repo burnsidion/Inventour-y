@@ -1,17 +1,9 @@
 import express from "express";
 import pool from "../utils/database.js";
-import multer from "multer";
 
 import { authenticateToken } from "../middleware/authenticateToken.js";
 
-import { fileURLToPath } from "url";
-import { dirname } from "path";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
 const router = express.Router();
-
 
 //Show Routes
 router.post("/", authenticateToken, async (req, res) => {

@@ -1,3 +1,4 @@
+//Dependencies
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -8,9 +9,12 @@ import supabase from "./utils/supabaseClient.js";
 import cors from "cors";
 import path from "path";
 
+
+//Routes
 import apiRoutes from "./routes/api.js";
 import usersRouter from "./routes/users.js";
 import showsRouter from "./routes/shows.js";
+import toursRouter from "./routes/tours.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +26,7 @@ app.use(express.json());
 app.use("/api", apiRoutes);
 app.use("/api/users", usersRouter);
 app.use("/api/shows", showsRouter);
+app.use("/api/tours", toursRouter);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/", (req, res) => {
